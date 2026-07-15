@@ -53,6 +53,19 @@ Run tests:
 npm test
 ```
 
+## Semantic model references
+
+Snowflake's Cortex Analyst semantic-view format is preserved as an architecture
+reference:
+
+- [Field-by-field explanation](./docs/snowflake-semantic-view-reference.md)
+- [Original placeholder template](./references/snowflake-semantic-view.template.yaml)
+- [TPC-H order analytics example](./references/snowflake-tpch-order-analytics.example.yaml)
+
+These files are documentation, not directly executable Cube models. They are
+used to guide a future portable semantic manifest that can compile into Cube
+models, the LLM member catalog, certified queries, and regression tests.
+
 ## Runtime configuration
 
 Runtime configuration and credentials are loaded from environment variables.

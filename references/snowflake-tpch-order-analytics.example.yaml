@@ -1,0 +1,171 @@
+name: tpch_order_analytics
+description: Governed TPC-H order and customer analytics reference model.
+
+tables:
+  - name: orders
+    description: Customer purchase orders from TPC-H.
+    base_table:
+      database: analytics
+      schema: tpch_100
+      table: orders
+
+    dimensions:
+      - name: order_key
+        synonyms: [order id, order number, 订单编号]
+        description: Unique identifier of an order.
+        expr: o_orderkey
+        data_type: number
+        unique: true
+        is_enum: false
+
+      - name: customer_key
+        synonyms: [customer id, 客户编号]
+        description: Identifier of the customer that placed the order.
+        expr: o_custkey
+        data_type: number
+        unique: false
+        is_enum: false
+
+      - name: order_status
+        synonyms: [status, order state, 订单状态]
+        description: F is fulfilled, O is open, and P is pending.
+        expr: o_orderstatus
+        data_type: varchar
+        unique: false
+        is_enum: true
+        labels: [filter]
+
+      - name: order_priority
+        synonyms: [priority, 订单优先级]
+        description: Processing priority assigned to the order.
+        expr: o_orderpriority
+        data_type: varchar
+        unique: false
+        is_enum: true
+        labels: [filter]
+
+    time_dimensions:
+      - name: order_date
+        synonyms: [date, order time, 下单日期]
+        description: Date on which the order was placed.
+        expr: o_orderdate
+        data_type: date
+        unique: false
+
+    facts:
+      - name: order_total
+        synonyms: [amount, order value, 订单金额]
+        description: Total price recorded for one order.
+        access_modifier: public_access
+        expr: o_totalprice
+        data_type: number
+
+    metrics:
+      - name: order_count
+        synonyms: [number of orders, 订单数量]
+        description: Number of orders.
+        access_modifier: public_access
+        expr: COUNT(order_key)
+
+      - name: total_order_amount
+        synonyms: [sales amount, GMV, 订单总金额]
+        description: Sum of order total prices.
+        access_modifier: public_access
+        expr: SUM(order_total)
+
+    filters:
+      - name: fulfilled_orders
+        synonyms: [completed orders, finished orders, 已完成订单]
+        description: Orders whose TPC-H status is F.
+        expr: order_status = 'F'
+
+  - name: customer
+    description: Customers who place orders.
+    base_table:
+      database: analytics
+      schema: tpch_100
+      table: customer
+
+    dimensions:
+      - name: customer_key
+        synonyms: [customer id, 客户编号]
+        description: Unique customer identifier.
+        expr: c_custkey
+        data_type: number
+        unique: true
+        is_enum: false
+
+      - name: customer_name
+        synonyms: [customer, buyer, 客户名称]
+        description: Customer display name.
+        expr: c_name
+        data_type: varchar
+        unique: false
+        is_enum: false
+
+    facts:
+      - name: account_balance
+        synonyms: [balance, account value, 账户余额]
+        description: Current customer account balance.
+        access_modifier: public_access
+        expr: c_acctbal
+        data_type: number
+
+    metrics:
+      - name: customer_count
+        synonyms: [number of customers, 客户数量]
+        description: Distinct customer count.
+        access_modifier: public_access
+        expr: COUNT(DISTINCT customer_key)
+
+relationships:
+  - name: orders_to_customer
+    left_table: orders
+    right_table: customer
+    relationship_columns:
+      - left_column: customer_key
+        right_column: customer_key
+
+variables:
+  - name: reporting_timezone
+    data_type: varchar
+    default_value: UTC
+    description: Timezone used when presenting time-based metrics.
+
+metrics:
+  - name: average_order_amount_per_customer
+    synonyms: [customer average order value, 客户平均订单金额]
+    description: Total order amount divided by distinct customers.
+    access_modifier: public_access
+    expr: orders.total_order_amount / customer.customer_count
+
+verified_queries:
+  - name: total_order_count
+    question: 订单总数是多少？
+    verified_by: demo-team
+    use_as_onboarding_question: true
+    sql: |
+      SELECT COUNT(*) AS order_count
+      FROM analytics.tpch_100.orders
+
+  - name: order_amount_by_status
+    question: 按订单状态统计订单数量和金额。
+    verified_by: demo-team
+    use_as_onboarding_question: true
+    sql: |
+      SELECT
+        o_orderstatus,
+        COUNT(*) AS order_count,
+        SUM(o_totalprice) AS total_order_amount
+      FROM analytics.tpch_100.orders
+      GROUP BY o_orderstatus
+      ORDER BY total_order_amount DESC
+
+module_custom_instructions:
+  sql_generation: |
+    Generate only one read-only SELECT statement.
+    Fully qualify physical tables with analytics.tpch_100.
+    Prefer certified metrics and verified queries.
+  question_categorization: |
+    Only answer questions about the modeled TPC-H order and customer domain.
+    Reject write operations and questions requiring undefined business metrics.

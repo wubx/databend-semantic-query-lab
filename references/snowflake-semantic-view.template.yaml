@@ -1,0 +1,145 @@
+# Snowflake semantic view YAML shape preserved for architecture comparison.
+# This file is documentation, not an executable Cube or Databend model.
+
+name: <name>
+description: <string>
+
+tables:
+  - name: <name>
+    description: <string>
+    base_table:
+      database: <database>
+      schema: <schema>
+      table: <base table name>
+      # Alternatively replace database/schema/table with:
+      # definition: <SQL query>
+
+    dimensions:
+      - name: <name>
+        synonyms: [<string>]
+        description: <string>
+        expr: <SQL expression>
+        data_type: <data type>
+        unique: <boolean>
+        cortex_search_service:
+          service: <string>
+          literal_column: <string>
+          database: <string>
+          schema: <string>
+        is_enum: <boolean>
+        labels: [filter]
+        tags:
+          - name:
+              database: <database>
+              schema: <schema>
+              tag: <tag_name>
+            value: <tag_value>
+
+    time_dimensions:
+      - name: <name>
+        synonyms: [<string>]
+        description: <string>
+        expr: <SQL expression>
+        data_type: <data type>
+        unique: <boolean>
+
+    facts:
+      - name: <name>
+        synonyms: [<string>]
+        description: <string>
+        access_modifier: <public_access | private_access>
+        expr: <SQL expression>
+        data_type: <data type>
+        labels: [filter]
+        tags:
+          - name:
+              database: <database>
+              schema: <schema>
+              tag: <tag_name>
+            value: <tag_value>
+
+    metrics:
+      - name: <name>
+        synonyms: [<string>]
+        description: <string>
+        access_modifier: <public_access | private_access>
+        expr: <SQL expression>
+        non_additive_dimensions:
+          - table: <table name>
+            dimension: <dimension name>
+            sort_direction: <ascending | descending>
+            null_order: <first | last>
+        using_relationships: [<relationship_name>]
+        tags:
+          - name:
+              database: <database>
+              schema: <schema>
+              tag: <tag_name>
+            value: <tag_value>
+
+    filters:
+      - name: <name>
+        synonyms: [<string>]
+        description: <string>
+        expr: <SQL expression>
+
+    tags:
+      - name:
+          database: <database>
+          schema: <schema>
+          tag: <tag_name>
+        value: <tag_value>
+
+relationships:
+  - name: <string>
+    left_table: <table>
+    right_table: <table>
+    relationship_columns:
+      - left_column: <column>
+        right_column: <column>
+        type: <asof | range>
+        right_range:
+          start_column: <column>
+          end_column: <column>
+      - left_column: <column>
+        right_column: <column>
+
+variables:
+  - name: <name>
+    data_type: <data type>
+    default_value: <string>
+    description: <string>
+
+metrics:
+  - name: <name>
+    synonyms: [<string>]
+    description: <string>
+    access_modifier: <public_access | private_access>
+    expr: <SQL expression>
+    tags:
+      - name:
+          database: <database>
+          schema: <schema>
+          tag: <tag_name>
+        value: <tag_value>
+
+verified_queries:
+  - name: <string>
+    question: <string>
+    verified_at: <int>
+    verified_by: <string>
+    use_as_onboarding_question: <boolean>
+    sql: <string>
+
+custom_instructions: <string>
+
+module_custom_instructions:
+  sql_generation: <string>
+  question_categorization: <string>
+
+tags:
+  - name:
+      database: <database>
+      schema: <schema>
+      tag: <tag_name>
+    value: <tag_value>
