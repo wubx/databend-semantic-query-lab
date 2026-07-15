@@ -15,7 +15,8 @@
   "dependencies": {
     "databend-driver": "0.25.4",
     "dotenv": "^16.6.1",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "undici": "^7.28.0"
   },
   "license": "Apache-2.0"
 }

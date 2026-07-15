@@ -20,9 +20,11 @@ Natural language
 - `Q6` — Parameterized forecasting revenue SQL
 - `Q21` — Supplier waiting SQL with `EXISTS` and `NOT EXISTS`
 
-The initial demo works without an LLM. An OpenAI-compatible planner will be
-added as an optional enhancement and must always fall back to this deterministic
-flow.
+The demo includes an optional OpenAI-compatible planner. The model can only
+select one of the six certified queries and extract an allowlisted parameter
+set; it cannot generate or execute SQL. Provider failure automatically falls
+back to the deterministic router. Result summaries receive only the natural
+language question, certified query ID, and real result rows.
 
 ## Run locally
 

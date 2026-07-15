@@ -6,6 +6,7 @@ const express = require('express');
 const { listQueries } = require('./catalog');
 const { cubeHealth, executeCube } = require('./cube');
 const { explainDatabend, queryDatabend } = require('./databend');
+const { isEnabled, summarizeWithLlm } = require('./llm');
 const { createPlan } = require('./planner');
 const { validateSql } = require('./sql-safety');
 
@@ -22,7 +23,12 @@ app.get('/api/health', async (_req, res) => {
     queryDatabend('SELECT 1 AS value').then(() => { checks.databend.ok = true; }).catch((error) => { checks.databend.error = error.message; }),
   ]);
   const ok = Object.values(checks).every((check) => check.ok);
-  res.status(ok ? 200 : 503).json({ ok, checks, aiEnabled: process.env.AI_ENABLED === 'true' });
+  res.status(ok ? 200 : 503).json({
+    ok,
+    checks,
+    aiEnabled: isEnabled(),
+    aiModel: isEnabled() ? process.env.AI_MODEL : null,
+  });
 });
 
 app.get('/api/query/examples', (_req, res) => res.json({ queries: listQueries() }));
@@ -51,24 +57,28 @@ app.post('/api/query/execute', asyncHandler(async (req, res) => {
   const startedAt = Date.now();
   if (plan.route === 'semantic') {
     const result = await executeCube(plan.cubeQuery);
-    return res.json({
+    const response = {
       plan,
       data: result.data,
       annotation: result.annotation,
       durationMs: Date.now() - startedAt,
       source: 'Cube semantic query',
       requestId: result.requestId,
-    });
+    };
+    response.summary = await safeSummary(req.body?.question, plan, response.data);
+    return res.json(response);
   }
 
   await explainDatabend(plan.sql);
   const rows = await queryDatabend(plan.sql);
-  return res.json({
+  const response = {
     plan,
     data: rows.slice(0, Number(process.env.RESULT_ROW_LIMIT || 500)),
     durationMs: Date.now() - startedAt,
     source: 'Certified TPC-H SQL',
-  });
+  };
+  response.summary = await safeSummary(req.body?.question, plan, response.data);
+  return res.json(response);
 }));
 
 app.get('*splat', (_req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
@@ -84,4 +94,13 @@ app.listen(port, () => {
 
 function asyncHandler(handler) {
   return (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
+}
+
+async function safeSummary(question, plan, data) {
+  try {
+    return await summarizeWithLlm({ question, plan, data });
+  } catch (error) {
+    console.warn(`AI summary unavailable: ${error.message}`);
+    return null;
+  }
 }

@@ -22,6 +22,9 @@
         <label><input type="radio" name="mode" value="auto" checked> 自动</label>
         <label><input type="radio" name="mode" value="semantic"> Semantic</label>
         <label><input type="radio" name="mode" value="tpch"> TPC-H</label>
+        <span class="mode-separator"></span>
+        <label><input type="radio" name="planner" value="auto" checked> AI + 自动回退</label>
+        <label><input type="radio" name="planner" value="deterministic"> 仅规则</label>
       </div>
       <textarea id="question" rows="3" placeholder="例如：按订单状态统计订单数量和金额"></textarea>
       <div id="examples" class="examples"></div>
@@ -50,6 +53,11 @@
       </div>
       <pre id="sql" class="code sql">尚未生成</pre>
       <div id="explainResult" class="explain hidden"></div>
+    </section>
+
+    <section id="summaryCard" class="card summary-card hidden">
+      <div class="card-title"><span>AI 结果解读</span><span class="badge subtle">基于真实结果</span></div>
+      <div id="summary" class="summary"></div>
     </section>
 
     <section class="card">

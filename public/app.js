@@ -1,4 +1,4 @@
-const elements = Object.fromEntries(['health', 'question', 'examples', 'plan', 'run', 'error', 'route', 'interpretation', 'cubeQuery', 'validation', 'explain', 'sql', 'explainResult', 'result', 'metrics'].map((id) => [id, document.getElementById(id)]));
+const elements = Object.fromEntries(['health', 'question', 'examples', 'plan', 'run', 'error', 'route', 'interpretation', 'cubeQuery', 'validation', 'explain', 'sql', 'explainResult', 'result', 'metrics', 'summaryCard', 'summary'].map((id) => [id, document.getElementById(id)]));
 let currentPlan;
 
 boot();
@@ -13,7 +13,9 @@ async function boot() {
 async function loadHealth() {
   try {
     const health = await api('/api/health');
-    elements.health.textContent = health.ok ? 'Cube 与 Databend 已连接' : '依赖服务异常';
+    elements.health.textContent = health.ok
+      ? `Cube 与 Databend 已连接${health.aiEnabled ? ` · AI ${health.aiModel}` : ''}`
+      : '依赖服务异常';
     elements.health.className = `health ${health.ok ? 'ok' : 'bad'}`;
   } catch (error) {
     elements.health.textContent = 'Demo API 未连接';
@@ -34,7 +36,11 @@ async function plan(execute) {
   setBusy(true);
   clearError();
   try {
-    const payload = { question: elements.question.value, mode: document.querySelector('input[name="mode"]:checked').value };
+    const payload = {
+      question: elements.question.value,
+      mode: document.querySelector('input[name="mode"]:checked').value,
+      planner: document.querySelector('input[name="planner"]:checked').value,
+    };
     const response = await api(execute ? '/api/query/execute' : '/api/query/plan', { method: 'POST', body: JSON.stringify(payload) });
     currentPlan = execute ? response.plan : response;
     renderPlan(currentPlan);
@@ -55,7 +61,7 @@ function renderPlan(plan) {
   elements.route.textContent = plan.route === 'semantic' ? 'Semantic' : 'TPC-H SQL';
   elements.interpretation.innerHTML = [
     ['认证查询', `${plan.queryId} · ${plan.title}`],
-    ['计划器', plan.planner],
+    ['计划器', plan.fallback ? `${plan.planner}（AI 回退：${plan.fallback.reason}）` : plan.planner],
     ['置信度', `${Math.round(plan.confidence * 100)}%`],
     ['执行路径', plan.route === 'semantic' ? 'Cube Semantic Query → Databend' : 'Certified SQL → Databend'],
     ['参数', JSON.stringify(plan.parameters || {})],
@@ -85,6 +91,12 @@ async function explain() {
 function renderResult(response) {
   const rows = response.data || [];
   elements.metrics.textContent = `${response.source} · ${response.durationMs} ms · ${rows.length} rows`;
+  if (response.summary) {
+    elements.summary.textContent = response.summary;
+    elements.summaryCard.classList.remove('hidden');
+  } else {
+    elements.summaryCard.classList.add('hidden');
+  }
   if (!rows.length) {
     elements.result.innerHTML = '<div class="empty">查询成功，但没有返回数据。</div>';
     return;
