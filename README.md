@@ -1,33 +1,70 @@
 # Databend Semantic SQL Demo
 
-A customer-facing technology demo for the following query flow:
+A customer-facing natural-language demo for Cube and Databend:
 
 ```text
 Natural language
-  → semantic query or certified TPC-H query
-  → validated Databend SQL
+  → deterministic certified-query router
+  → Cube semantic query or certified TPC-H SQL
+  → SQL safety validation and EXPLAIN
   → Databend execution
-  → results and explanation
+  → real result table
 ```
 
-## Status
+## Implemented queries
 
-Planning stage. Driver stabilization continues in
-[`wubx/cube`](https://github.com/wubx/cube) on the `feat/databend-driver`
-branch.
+- `S1` — Total order count through Cube
+- `S2` — Order amount by status through Cube
+- `S3` — Monthly order amount trend through Cube
+- `Q1` — TPC-H pricing summary SQL
+- `Q6` — Parameterized forecasting revenue SQL
+- `Q21` — Supplier waiting SQL with `EXISTS` and `NOT EXISTS`
 
-See [PLAN.md](./PLAN.md) for milestones and acceptance criteria.
+The initial demo works without an LLM. An OpenAI-compatible planner will be
+added as an optional enhancement and must always fall back to this deterministic
+flow.
 
-## Local configuration
+## Run locally
 
-Runtime configuration and credentials are loaded from environment variables.
-Create a local file from the committed placeholder template:
+Requirements:
+
+- Cube running at `http://localhost:4000` with the Databend semantic model
+- Databend available to the local machine
+- Node.js 20 or later
 
 ```bash
 cp .env.example .env
+# Set DATABEND_DSN to a read-only Databend account.
+npm install
+npm start
 ```
 
+Open:
+
+```text
+http://localhost:4100
+```
+
+Run tests:
+
+```bash
+npm test
+```
+
+## Runtime configuration
+
+Runtime configuration and credentials are loaded from environment variables.
 The `.env` file and all `.env.*` variants except `.env.example` are ignored by
-Git. Never commit real Cube, Databend, or AI provider credentials. The AI
-integration is optional; the deterministic demo must remain usable with
-`AI_ENABLED=false`.
+Git. Never commit real Cube, Databend, or AI provider credentials.
+
+External AI requests can use:
+
+```env
+HTTPS_PROXY=http://127.0.0.1:7890
+HTTP_PROXY=http://127.0.0.1:7890
+NO_PROXY=127.0.0.1,localhost,192.168.1.100
+```
+
+See [PLAN.md](./PLAN.md) for milestones and acceptance criteria. Driver work
+continues in [`wubx/cube`](https://github.com/wubx/cube) on
+`feat/databend-driver`.

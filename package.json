@@ -1,0 +1,21 @@
+{
+  "name": "databend-semantic-sql-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Natural-language semantic SQL demo for Cube and Databend",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "databend-driver": "0.25.4",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0"
+  },
+  "license": "Apache-2.0"
+}

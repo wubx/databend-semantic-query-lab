@@ -92,15 +92,15 @@ No customer demo is considered stable until this gate passes.
 
 ### Certified semantic queries
 
-- [ ] S1 — Total order count
-- [ ] S2 — Order amount by order status
-- [ ] S3 — Monthly order amount trend
+- [x] S1 — Total order count
+- [x] S2 — Order amount by order status
+- [x] S3 — Monthly order amount trend
 
 ### Certified TPC-H queries
 
-- [ ] Q1 — Pricing summary report
-- [ ] Q6 — Forecasting revenue change
-- [ ] Q21 — Suppliers who kept orders waiting
+- [x] Q1 — Pricing summary report
+- [x] Q6 — Forecasting revenue change
+- [x] Q21 — Suppliers who kept orders waiting
 
 ### Verification
 
@@ -113,40 +113,40 @@ No customer demo is considered stable until this gate passes.
 
 ### API
 
-- [ ] `GET /api/health`
-- [ ] `GET /api/query/examples`
-- [ ] `POST /api/query/plan`
-- [ ] `POST /api/query/validate`
-- [ ] `POST /api/query/execute`
+- [x] `GET /api/health`
+- [x] `GET /api/query/examples`
+- [x] `POST /api/query/plan`
+- [x] `POST /api/query/validate`
+- [x] `POST /api/query/execute`
 
 ### Query router
 
-- [ ] Route common metric questions to certified semantic queries
-- [ ] Route Q1, Q6, and Q21 questions to certified SQL templates
-- [ ] Extract supported template parameters deterministically
-- [ ] Reject unsupported questions with a clear message
+- [x] Route common metric questions to certified semantic queries
+- [x] Route Q1, Q6, and Q21 questions to certified SQL templates
+- [x] Extract supported template parameters deterministically
+- [x] Reject unsupported questions with a clear message
 
 ### SQL safety
 
-- [ ] Allow only a single `SELECT`, `WITH ... SELECT`, or `EXPLAIN` statement
-- [ ] Restrict access to `tpch_100`
-- [ ] Reject DDL, DML, `COPY`, `SET`, `USE`, `KILL`, and multi-statement SQL
+- [x] Allow only a single `SELECT`, `WITH ... SELECT`, or `EXPLAIN` statement
+- [x] Restrict access to `tpch_100`
+- [x] Reject DDL, DML, `COPY`, `SET`, `USE`, `KILL`, and multi-statement SQL
 - [ ] Use a read-only Databend account
 - [ ] Enforce query timeout
-- [ ] Limit result rows
-- [ ] Run `EXPLAIN` before execution
+- [x] Limit result rows
+- [x] Run `EXPLAIN` before execution
 
 ### Web UI
 
-- [ ] Natural-language input
-- [ ] Example question selector
-- [ ] Auto, Semantic, and TPC-H modes
-- [ ] Query interpretation panel
-- [ ] Cube Query panel when applicable
-- [ ] Generated Databend SQL panel
-- [ ] Validate, Explain, and Run actions
-- [ ] Result table
-- [ ] Duration and Databend query ID
+- [x] Natural-language input
+- [x] Example question selector
+- [x] Auto, Semantic, and TPC-H modes
+- [x] Query interpretation panel
+- [x] Cube Query panel when applicable
+- [x] Generated Databend SQL panel
+- [x] Validate, Explain, and Run actions
+- [x] Result table
+- [x] Duration and source/request metadata
 
 ### Acceptance
 
@@ -211,12 +211,12 @@ This milestone is not required for the first customer demo.
 
 | ID | Question | Route | Initial status |
 | --- | --- | --- | --- |
-| S1 | 订单总数是多少？ | Semantic | Pending |
-| S2 | 按订单状态统计订单金额。 | Semantic | Pending |
-| S3 | 每月订单金额趋势是什么？ | Semantic | Pending |
-| Q1 | 执行 TPC-H Q1 定价汇总报表。 | TPC-H template | Pending |
-| Q6 | 执行 Q6，折扣在 5% 到 7% 之间，数量小于 24。 | TPC-H template | Pending |
-| Q21 | 查询没有收到延迟订单的供应商。 | TPC-H template | Pending |
+| S1 | 订单总数是多少？ | Semantic | Passed |
+| S2 | 按订单状态统计订单金额。 | Semantic | Passed |
+| S3 | 每月订单金额趋势是什么？ | Semantic | Implemented |
+| Q1 | 执行 TPC-H Q1 定价汇总报表。 | TPC-H template | Implemented |
+| Q6 | 执行 Q6，折扣在 5% 到 7% 之间，数量小于 24。 | TPC-H template | Passed |
+| Q21 | 查询沙特阿拉伯导致已完成订单等待的供应商。 | TPC-H template | Implemented |
 
 ## Customer Demo Script
 

@@ -1,0 +1,38 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const { deterministicPlan, extractQ6Parameters } = require('../src/router');
+const { validateSql } = require('../src/sql-safety');
+
+test('routes semantic questions deterministically', () => {
+  assert.equal(deterministicPlan('订单总数是多少？').queryId, 'S1');
+  assert.equal(deterministicPlan('按订单状态统计订单金额。').queryId, 'S2');
+  assert.equal(deterministicPlan('每月订单金额趋势是什么？').queryId, 'S3');
+});
+
+test('routes certified TPC-H queries', () => {
+  assert.equal(deterministicPlan('执行 TPC-H Q1 定价汇总报表。').queryId, 'Q1');
+  assert.equal(deterministicPlan('执行 Q21，查询等待订单的供应商。').queryId, 'Q21');
+});
+
+test('extracts Q6 parameters', () => {
+  assert.deepEqual(extractQ6Parameters('执行 Q6，折扣在 5% 到 7% 之间，数量小于 24。'), {
+    discountMin: 0.05,
+    discountMax: 0.07,
+    quantity: 24,
+  });
+});
+
+test('rejects unsupported questions', () => {
+  assert.equal(deterministicPlan('请删除数据库里的所有表').supported, false);
+});
+
+test('allows read-only schema-qualified SQL', () => {
+  assert.equal(validateSql('SELECT COUNT(*) FROM tpch_100.orders').valid, true);
+});
+
+test('rejects writes, multiple statements, and other schemas', () => {
+  assert.equal(validateSql('DROP TABLE tpch_100.orders').valid, false);
+  assert.equal(validateSql('SELECT 1; SELECT 2').valid, false);
+  assert.equal(validateSql('SELECT * FROM production.orders').valid, false);
+});
