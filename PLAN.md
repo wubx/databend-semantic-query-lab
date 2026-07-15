@@ -161,6 +161,8 @@ The LLM performs only routing, parameter extraction, and result explanation.
 It does not execute SQL or change semantic models.
 
 - [ ] Add an OpenAI-compatible provider interface
+- [ ] Load provider URL, API key, model, and timeout only from environment variables
+- [ ] Keep `.env` and provider credentials out of Git; commit placeholders only in `.env.example`
 - [ ] Enforce structured JSON Schema output
 - [ ] Select Semantic or TPC-H route
 - [ ] Select a certified query ID
@@ -169,6 +171,7 @@ It does not execute SQL or change semantic models.
 - [ ] Add timeout and retry limits
 - [ ] Fall back to deterministic routing when unavailable
 - [ ] Never send Databend credentials to the model
+- [ ] Add a secret scan to CI before enabling external contributions
 
 ### Evaluation
 

@@ -17,3 +17,17 @@ Planning stage. Driver stabilization continues in
 branch.
 
 See [PLAN.md](./PLAN.md) for milestones and acceptance criteria.
+
+## Local configuration
+
+Runtime configuration and credentials are loaded from environment variables.
+Create a local file from the committed placeholder template:
+
+```bash
+cp .env.example .env
+```
+
+The `.env` file and all `.env.*` variants except `.env.example` are ignored by
+Git. Never commit real Cube, Databend, or AI provider credentials. The AI
+integration is optional; the deterministic demo must remain usable with
+`AI_ENABLED=false`.

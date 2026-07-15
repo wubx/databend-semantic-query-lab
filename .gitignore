@@ -1,5 +1,12 @@
 node_modules/
 dist/
+
+# Local configuration and secrets
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+
 *.log
 .DS_Store
