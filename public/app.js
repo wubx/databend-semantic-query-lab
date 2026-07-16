@@ -111,7 +111,7 @@ function renderPlan(plan) {
         ? "Cube Semantic Query → Databend"
         : "Certified SQL → Databend",
     ],
-    ["参数", JSON.stringify(plan.parameters || {})],
+    ["查询参数", formatQueryParameters(plan)],
     ["计划耗时", formatTimings(plan.timings)],
   ]
     .map(
@@ -215,6 +215,11 @@ async function api(url, options = {}) {
         `HTTP ${response.status}`,
     );
   return body;
+}
+
+function formatQueryParameters(plan) {
+  const parameters = plan.queryParameters || plan.parameters || {};
+  return Object.keys(parameters).length ? JSON.stringify(parameters) : "无";
 }
 
 function formatTimings(timings) {

@@ -23,6 +23,14 @@ test("builds an observation with question, Cube Query, SQL, and timings", () => 
       route: "semantic",
       planner: "llm",
       confidence: 0.98,
+      queryParameters: {
+        timeDimensions: [
+          {
+            dimension: "LineItem.shipDate",
+            dateRange: ["1995-01-01", "1995-12-31"],
+          },
+        ],
+      },
       cubeQuery: {
         measures: ["LineItem.count"],
         segments: ["LineItem.delayedReceipt"],
@@ -44,6 +52,14 @@ test("builds an observation with question, Cube Query, SQL, and timings", () => 
     },
   });
 
+  assert.deepEqual(observation.queryParameters, {
+    timeDimensions: [
+      {
+        dimension: "LineItem.shipDate",
+        dateRange: ["1995-01-01", "1995-12-31"],
+      },
+    ],
+  });
   assert.equal(observation.confidence, 0.98);
   assert.equal(observation.question, "统计延迟收货的明细数量");
   assert.deepEqual(observation.cubeQuery.segments, ["LineItem.delayedReceipt"]);

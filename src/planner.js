@@ -54,6 +54,7 @@ async function createPlan({ question, mode = "auto", planner = "auto" }) {
     plan.timings = timings;
     return plan;
   }
+  plan.queryParameters = collectQueryParameters(plan);
 
   const sqlStartedAt = performance.now();
   if (plan.route === "semantic") {
@@ -72,6 +73,24 @@ async function createPlan({ question, mode = "auto", planner = "auto" }) {
   timings.totalMs = elapsed(totalStartedAt);
   plan.timings = timings;
   return plan;
+}
+
+function collectQueryParameters(plan) {
+  const result = { ...(plan.parameters || {}) };
+  const query = plan.cubeQuery;
+  if (!query) return result;
+  if (query.timeDimensions?.length) {
+    result.timeDimensions = query.timeDimensions.map((item) => ({
+      dimension: item.dimension,
+      granularity: item.granularity,
+      dateRange: item.dateRange,
+    }));
+  }
+  if (query.filters?.length) result.filters = query.filters;
+  if (query.segments?.length) result.segments = query.segments;
+  if (query.limit !== undefined) result.limit = query.limit;
+  if (query.timezone) result.timezone = query.timezone;
+  return result;
 }
 
 function elapsed(startedAt) {
