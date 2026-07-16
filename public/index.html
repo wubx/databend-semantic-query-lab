@@ -128,6 +128,9 @@
           <button class="semantic-view-tab active" data-semantic-view="catalog">
             目录视图
           </button>
+          <button class="semantic-view-tab" data-semantic-view="certified-sql">
+            认证 SQL
+          </button>
           <button class="semantic-view-tab" data-semantic-view="source">
             原始 YAML
           </button>
@@ -173,6 +176,106 @@
                 <div id="verifiedQueryList" class="verified-query-list"></div>
               </section>
             </div>
+          </section>
+        </div>
+        <div id="certifiedSqlView" class="semantic-subview">
+          <section class="certified-sql-layout">
+            <aside class="card certified-sql-list-card">
+              <div class="card-title">
+                <div>
+                  <span>认证 SQL</span>
+                  <p>受控 SQL Template 资产</p>
+                </div>
+                <button id="newCertifiedSql" class="tiny primary">新建</button>
+              </div>
+              <div id="certifiedSqlList" class="certified-sql-list">
+                <div class="empty">正在加载认证 SQL…</div>
+              </div>
+            </aside>
+            <section class="card certified-sql-editor-card">
+              <div class="card-title">
+                <div>
+                  <span id="certifiedSqlHeading">选择或新建认证 SQL</span>
+                  <p id="certifiedSqlMeta">
+                    校验通过并发布后才参与自然语言路由
+                  </p>
+                </div>
+                <div class="source-actions">
+                  <button id="validateCertifiedSql" class="tiny secondary">
+                    校验
+                  </button>
+                  <button id="explainCertifiedSql" class="tiny secondary">
+                    EXPLAIN
+                  </button>
+                  <button id="publishCertifiedSql" class="tiny primary">
+                    发布
+                  </button>
+                  <button id="deleteCertifiedSql" class="tiny danger">
+                    删除
+                  </button>
+                </div>
+              </div>
+              <div class="certified-sql-form">
+                <label
+                  >Query ID<input id="certifiedSqlId" placeholder="Q22"
+                /></label>
+                <label
+                  >名称<input id="certifiedSqlTitle" placeholder="认证查询名称"
+                /></label>
+                <label class="wide"
+                  >说明<input
+                    id="certifiedSqlDescription"
+                    placeholder="业务用途与结果口径"
+                /></label>
+                <label
+                  >状态<select id="certifiedSqlStatus">
+                    <option value="draft">draft</option>
+                    <option value="validated">validated</option>
+                    <option value="certified">certified</option>
+                    <option value="disabled">disabled</option>
+                    <option value="deprecated">deprecated</option>
+                  </select></label
+                >
+                <label class="check"
+                  ><input id="certifiedSqlEnabled" type="checkbox" checked />
+                  启用路由</label
+                >
+                <label class="wide"
+                  >标准问题<input
+                    id="certifiedSqlQuestion"
+                    placeholder="用户最常使用的问题"
+                /></label>
+                <label class="wide"
+                  >示例表达（每行一个）<textarea
+                    id="certifiedSqlExamples"
+                    rows="4"
+                    placeholder="执行查询…"
+                  ></textarea>
+                </label>
+                <label class="wide"
+                  >参数 Schema（YAML）<textarea
+                    id="certifiedSqlParameters"
+                    rows="10"
+                    spellcheck="false"
+                    placeholder="days:\n  type: integer\n  default: 90"
+                  ></textarea>
+                </label>
+                <label class="wide"
+                  >SQL Template<textarea
+                    id="certifiedSqlEditor"
+                    class="certified-sql-editor"
+                    rows="20"
+                    spellcheck="false"
+                    placeholder="SELECT ... WHERE value = {{parameter}}"
+                  ></textarea>
+                </label>
+              </div>
+              <div
+                id="certifiedSqlStatusMessage"
+                class="source-edit-status hidden"
+              ></div>
+              <pre id="certifiedSqlExplainResult" class="code hidden"></pre>
+            </section>
           </section>
         </div>
         <div id="semanticSourceView" class="semantic-subview">

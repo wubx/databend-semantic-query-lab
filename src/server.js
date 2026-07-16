@@ -4,6 +4,13 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const express = require("express");
 
+const {
+  deleteCertifiedSqlAsset,
+  getCertifiedSqlAsset,
+  listCertifiedSqlAssets,
+  publishCertifiedSqlAsset,
+  validateCertifiedSqlAsset,
+} = require("./certified-sql");
 const { listQueries } = require("./catalog");
 const { explainDatabend, queryDatabend } = require("./databend");
 const { isEnabled, summarizeWithLlm } = require("./llm");
@@ -46,6 +53,7 @@ const {
 
 const app = express();
 const port = Number(process.env.PORT || 4100);
+const host = String(process.env.HOST || "0.0.0.0");
 
 app.use(express.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "..", "public")));
@@ -273,6 +281,52 @@ app.post(
   }),
 );
 
+app.get("/api/certified-sql", (_req, res) => {
+  res.json({
+    publishEnabled: process.env.CERTIFIED_SQL_PUBLISH_ENABLED === "true",
+    queries: listCertifiedSqlAssets(),
+  });
+});
+
+app.get("/api/certified-sql/:id", (req, res) => {
+  res.json(getCertifiedSqlAsset(req.params.id));
+});
+
+app.post(
+  "/api/certified-sql/validate",
+  asyncHandler(async (req, res) => {
+    res.json(validateCertifiedSqlAsset(req.body));
+  }),
+);
+
+app.post(
+  "/api/certified-sql/explain",
+  asyncHandler(async (req, res) => {
+    const result = validateCertifiedSqlAsset(req.body);
+    const startedAt = Date.now();
+    const rows = await explainDatabend(result.compiledSql);
+    res.json({ ...result, rows, durationMs: Date.now() - startedAt });
+  }),
+);
+
+app.post(
+  "/api/certified-sql/publish",
+  asyncHandler(async (req, res) => {
+    if (process.env.CERTIFIED_SQL_PUBLISH_ENABLED !== "true")
+      return res.status(403).json({ error: "认证 SQL 发布未启用" });
+    res.json({ ok: true, ...publishCertifiedSqlAsset(req.body) });
+  }),
+);
+
+app.delete(
+  "/api/certified-sql/:id",
+  asyncHandler(async (req, res) => {
+    if (process.env.CERTIFIED_SQL_PUBLISH_ENABLED !== "true")
+      return res.status(403).json({ error: "认证 SQL 发布未启用" });
+    res.json({ ok: true, ...deleteCertifiedSqlAsset(req.params.id) });
+  }),
+);
+
 app.post(
   "/api/query/plan",
   asyncHandler(async (req, res) => {
@@ -484,10 +538,13 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ error: error.message || String(error) });
 });
 
-app.listen(port, () => {
+app.listen(port, host, () => {
+  const displayHost = host === "0.0.0.0" || host === "::" ? "localhost" : host;
   console.log(
-    `Databend Semantic SQL Demo is listening on http://localhost:${port}`,
+    `Databend Semantic SQL Demo is listening on http://${displayHost}:${port}`,
   );
+  if (host === "0.0.0.0" || host === "::")
+    console.log(`LAN access is enabled on port ${port}`);
 });
 
 function validateIdentifier(value, label) {

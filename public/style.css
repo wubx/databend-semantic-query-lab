@@ -574,6 +574,124 @@ td {
 .semantic-subview.active {
   display: block;
 }
+.certified-sql-layout {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+.certified-sql-list-card,
+.certified-sql-editor-card {
+  padding: 0;
+  overflow: hidden;
+}
+.certified-sql-list-card .card-title,
+.certified-sql-editor-card .card-title {
+  margin: 0;
+  padding: 16px 18px;
+  border-bottom: 1px solid #203b50;
+}
+.certified-sql-list-card .card-title p,
+.certified-sql-editor-card .card-title p {
+  margin: 4px 0 0;
+  color: #66859e;
+  font-size: 10px;
+  font-weight: 400;
+}
+.certified-sql-list {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+.certified-sql-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 11px;
+  color: #a9c0d2;
+  background: transparent;
+  text-align: left;
+}
+.certified-sql-item:hover {
+  background: #0d2235;
+}
+.certified-sql-item.active {
+  color: #5ee1c8;
+  background: #102b3d;
+  box-shadow: inset 3px 0 #4cd9bd;
+}
+.certified-sql-item span,
+.certified-sql-item strong,
+.certified-sql-item small {
+  display: block;
+  min-width: 0;
+}
+.certified-sql-item small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: #607e96;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.certified-sql-item em {
+  align-self: start;
+  color: #d9a967;
+  font-size: 9px;
+  font-style: normal;
+}
+.certified-sql-item em.ok {
+  color: #58dfc5;
+}
+.certified-sql-form {
+  display: grid;
+  grid-template-columns: 180px minmax(240px, 1fr);
+  gap: 13px;
+  padding: 18px;
+}
+.certified-sql-form label {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  color: #86a4bb;
+  font-size: 10px;
+  font-weight: 700;
+}
+.certified-sql-form label.wide {
+  grid-column: 1 / -1;
+}
+.certified-sql-form label.check {
+  display: flex;
+  align-items: center;
+}
+.certified-sql-form input:not([type="checkbox"]),
+.certified-sql-form select,
+.certified-sql-form textarea {
+  width: 100%;
+  padding: 9px 10px;
+  color: #c7dceb;
+  background: #06131f;
+  border: 1px solid #294662;
+  border-radius: 8px;
+  outline: none;
+}
+.certified-sql-form textarea {
+  resize: vertical;
+  font:
+    11px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+.certified-sql-editor {
+  min-height: 330px;
+}
+.certified-sql-editor-card > pre {
+  max-height: 300px;
+  margin: 0 18px 18px;
+}
+
 .source-browser {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -1086,7 +1204,8 @@ td {
   .modeler-body {
     grid-template-columns: 1fr;
   }
-  .source-browser {
+  .source-browser,
+  .certified-sql-layout {
     grid-template-columns: 1fr;
   }
   .source-sidebar {

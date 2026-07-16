@@ -325,6 +325,21 @@ semantic/backups/
 - 切换 `SEMANTIC_GATEWAY`；
 - 更换或重新构建 `CUBE_REPOSITORY_PATH` 指向的 Cube 编译器代码。
 
+需要维护认证 SQL 时，单独开启：
+
+```env
+CERTIFIED_SQL_PUBLISH_ENABLED=true
+```
+
+开启后，“语义层 → 认证 SQL”支持新建、修改、参数 Schema 校验、SQL Safety、`EXPLAIN`、发布和删除。Q1、Q6、Q21 的元数据与 SQL Template 位于：
+
+```text
+semantic/certified-sql/queries.yaml
+semantic/certified-sql/templates/*.sql
+```
+
+发布和删除会自动备份到 `semantic/certified-sql/backups/`，Catalog 按请求实时读取，发布后无需重启。共享演示环境建议保持该开关为 `false`。
+
 ## 构建和校验语义模型
 
 将模块化语义源确定性组装为运行时产物：
@@ -364,9 +379,54 @@ npm run validate:meta
 npm run report:queries
 ```
 
+## 局域网访问
+
+服务默认监听：
+
+```env
+HOST=0.0.0.0
+PORT=4100
+```
+
+因此同一局域网中的其他设备可以通过运行 Demo 的机器 IP 访问。例如服务器地址为 `192.168.1.5`：
+
+```text
+http://192.168.1.5:4100
+```
+
+在 macOS 上可查询当前 Wi-Fi 地址：
+
+```bash
+ipconfig getifaddr en0
+```
+
+Linux 常用命令：
+
+```bash
+hostname -I
+```
+
+如果局域网设备无法连接，请检查：
+
+- 两台设备是否位于同一局域网或可路由网段；
+- 系统防火墙是否允许 Node.js 或 TCP `4100` 端口；
+- 路由器是否启用了 AP / Client Isolation；
+- 公司网络或 VPN 是否阻断设备间访问；
+- 页面应使用服务端机器的局域网 IP，不能在其他设备上访问 `localhost:4100`。
+
+只允许本机访问时设置：
+
+```env
+HOST=127.0.0.1
+```
+
+修改 `HOST` 或 `PORT` 后需要重启服务。
+
+> **安全警告：** 当前 Demo 没有登录、用户隔离、TLS、CSRF 防护和接口级授权。开放到局域网后，局域网用户可以调用查询、`EXPLAIN` 和执行接口；如果 `MODELER_PUBLISH_ENABLED=true`，还可以修改或删除语义模型。建议使用只读 Databend 账户，并在共享演示时保持 `MODELER_PUBLISH_ENABLED=false`、限制主机防火墙来源。不要直接暴露到公网。需要多人长期使用时，应在前面增加带认证和 HTTPS 的反向代理，并使用 Cube Server 承担运行时访问治理。
+
 ## 页面使用
 
-启动后访问 `http://localhost:4100`。
+启动后可在本机访问 `http://localhost:4100`；启用默认局域网监听时，也可通过 `http://<服务器局域网IP>:4100` 访问。
 
 ### 查询页面
 
@@ -382,28 +442,31 @@ npm run report:queries
 - **语义模型**：按实体和成员浏览业务语义层
 - **关系图**：查看实体间 Join 关系
 - **认证查询**：查看已验证的问题和 Cube Query
+- **认证 SQL**：管理 Q1、Q6、Q21 等受控 SQL Template，支持参数 Schema、校验、`EXPLAIN` 和发布
 - **原始 YAML**：查看、编辑、校验和发布模块化语义源
 - **生成模型**：选择 Databend 数据库和表，生成规则草稿或 LLM 增强草稿
 
 ## 常用配置
 
-| 环境变量                     | 默认值                             | 说明                                      |
-| ---------------------------- | ---------------------------------- | ----------------------------------------- |
-| `PORT`                       | `4100`                             | Demo HTTP 端口                            |
-| `SEMANTIC_GATEWAY`           | `embedded`                         | `embedded` 或 `cube-server`               |
-| `CUBE_REPOSITORY_PATH`       | 无                                 | Embedded 模式下已构建 Cube 仓库的绝对路径 |
-| `CUBE_API_URL`               | 无                                 | Cube Server API 地址                      |
-| `CUBE_API_SECRET`            | 无                                 | Cube Server API Secret                    |
-| `DATABEND_DSN`               | 无                                 | Databend 连接字符串，建议使用只读用户     |
-| `RESULT_ROW_LIMIT`           | `500`                              | 单次返回的最大行数                        |
-| `AI_ENABLED`                 | `false`                            | 是否启用 LLM 规划、摘要和模型增强         |
-| `AI_BASE_URL`                | OpenAI API                         | OpenAI-compatible API 地址                |
-| `AI_MODEL`                   | `gpt-4.1-mini`                     | 模型名称                                  |
-| `MODELER_PUBLISH_ENABLED`    | `false`                            | 是否允许写入、替换和删除语义源文件        |
-| `MODEL_GENERATOR_MAX_TABLES` | `20`                               | 单次最多生成的表数量                      |
-| `QUERY_LOG_ENABLED`          | `true`                             | 是否记录查询可观测日志                    |
-| `QUERY_LOG_PATH`             | `logs/query-observability.jsonl`   | 查询日志文件                              |
-| `MODELER_LOG_PATH`           | `logs/modeler-observability.jsonl` | 模型生成日志文件                          |
+| 环境变量                        | 默认值                             | 说明                                      |
+| ------------------------------- | ---------------------------------- | ----------------------------------------- |
+| `HOST`                          | `0.0.0.0`                          | 监听地址；默认允许局域网访问              |
+| `PORT`                          | `4100`                             | Demo HTTP 端口                            |
+| `SEMANTIC_GATEWAY`              | `embedded`                         | `embedded` 或 `cube-server`               |
+| `CUBE_REPOSITORY_PATH`          | 无                                 | Embedded 模式下已构建 Cube 仓库的绝对路径 |
+| `CUBE_API_URL`                  | 无                                 | Cube Server API 地址                      |
+| `CUBE_API_SECRET`               | 无                                 | Cube Server API Secret                    |
+| `DATABEND_DSN`                  | 无                                 | Databend 连接字符串，建议使用只读用户     |
+| `RESULT_ROW_LIMIT`              | `500`                              | 单次返回的最大行数                        |
+| `AI_ENABLED`                    | `false`                            | 是否启用 LLM 规划、摘要和模型增强         |
+| `AI_BASE_URL`                   | OpenAI API                         | OpenAI-compatible API 地址                |
+| `AI_MODEL`                      | `gpt-4.1-mini`                     | 模型名称                                  |
+| `MODELER_PUBLISH_ENABLED`       | `false`                            | 是否允许写入、替换和删除语义源文件        |
+| `CERTIFIED_SQL_PUBLISH_ENABLED` | `false`                            | 是否允许新增、修改和删除认证 SQL          |
+| `MODEL_GENERATOR_MAX_TABLES`    | `20`                               | 单次最多生成的表数量                      |
+| `QUERY_LOG_ENABLED`             | `true`                             | 是否记录查询可观测日志                    |
+| `QUERY_LOG_PATH`                | `logs/query-observability.jsonl`   | 查询日志文件                              |
+| `MODELER_LOG_PATH`              | `logs/modeler-observability.jsonl` | 模型生成日志文件                          |
 
 完整示例见 [`.env.example`](./.env.example)。
 
@@ -415,6 +478,7 @@ npm run report:queries
 ├── semantic/
 │   ├── model.yaml                 # 模型入口
 │   ├── entities/                  # 模块化实体模型
+│   ├── certified-sql/            # 认证 SQL Catalog、模板和备份
 │   ├── relationships.yaml         # 关系定义
 │   ├── verified-queries.yaml      # 认证查询
 │   ├── policy.yaml                # AI / 查询 Policy 声明
@@ -466,6 +530,7 @@ logs/modeler-observability.jsonl
 
 ## 进一步阅读
 
+- [自然语言查询验证手册](./docs/natural-language-query-examples.md)
 - [Embedded Cube Compiler 模式](./docs/embedded-cube-compiler.md)
 - [Semantic Manifest 维护设计](./docs/semantic-manifest-maintenance.md)
 - [验证和回归测试](./docs/validation-and-regression.md)

@@ -32,6 +32,26 @@ const elements = Object.fromEntries(
     "memberGrid",
     "verifiedQueryList",
     "semanticCatalogView",
+    "certifiedSqlView",
+    "certifiedSqlList",
+    "newCertifiedSql",
+    "certifiedSqlHeading",
+    "certifiedSqlMeta",
+    "certifiedSqlId",
+    "certifiedSqlTitle",
+    "certifiedSqlDescription",
+    "certifiedSqlStatus",
+    "certifiedSqlEnabled",
+    "certifiedSqlQuestion",
+    "certifiedSqlExamples",
+    "certifiedSqlParameters",
+    "certifiedSqlEditor",
+    "validateCertifiedSql",
+    "explainCertifiedSql",
+    "publishCertifiedSql",
+    "deleteCertifiedSql",
+    "certifiedSqlStatusMessage",
+    "certifiedSqlExplainResult",
     "semanticSourceView",
     "semanticSource",
     "sourceMeta",
@@ -69,6 +89,9 @@ let selectedSourceFile = "compiled";
 let sourceEditing = false;
 let modelerDatabases = [];
 let generatedDraftState = new Map();
+let certifiedSqlAssets = [];
+let selectedCertifiedSqlId = null;
+let certifiedSqlPublishEnabled = false;
 
 boot();
 
@@ -78,6 +101,7 @@ async function boot() {
     loadExamples(),
     loadSemanticModel(),
     loadSemanticSourceFiles(),
+    loadCertifiedSqlAssets(),
     loadModelerDatabases(),
   ]);
   elements.plan.addEventListener("click", () => plan(false));
@@ -127,6 +151,24 @@ async function boot() {
   elements.tableSelector.addEventListener("change", updateModelerSelection);
   elements.generateModel.addEventListener("click", generateModelDrafts);
   elements.generatedDrafts.addEventListener("click", handleDraftAction);
+  elements.certifiedSqlList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-certified-sql]");
+    if (button) selectCertifiedSql(button.dataset.certifiedSql);
+  });
+  elements.newCertifiedSql.addEventListener("click", newCertifiedSql);
+  elements.validateCertifiedSql.addEventListener("click", () =>
+    submitCertifiedSql("validate"),
+  );
+  elements.explainCertifiedSql.addEventListener("click", () =>
+    submitCertifiedSql("explain"),
+  );
+  elements.publishCertifiedSql.addEventListener("click", () =>
+    submitCertifiedSql("publish"),
+  );
+  elements.deleteCertifiedSql.addEventListener(
+    "click",
+    deleteCurrentCertifiedSql,
+  );
   document
     .querySelectorAll("[data-page]")
     .forEach((tab) =>
@@ -141,11 +183,237 @@ function showSemanticView(view) {
       tab.classList.toggle("active", tab.dataset.semanticView === view),
     );
   elements.semanticCatalogView.classList.toggle("active", view === "catalog");
+  elements.certifiedSqlView.classList.toggle(
+    "active",
+    view === "certified-sql",
+  );
   elements.semanticSourceView.classList.toggle("active", view === "source");
   elements.semanticGeneratorView.classList.toggle(
     "active",
     view === "generate",
   );
+}
+
+async function loadCertifiedSqlAssets(preferredId = selectedCertifiedSqlId) {
+  try {
+    const response = await api("/api/certified-sql");
+    certifiedSqlAssets = response.queries;
+    certifiedSqlPublishEnabled = response.publishEnabled;
+    renderCertifiedSqlList();
+    const selected =
+      certifiedSqlAssets.find((item) => item.id === preferredId) ||
+      certifiedSqlAssets[0];
+    if (selected) selectCertifiedSql(selected.id);
+    else newCertifiedSql();
+  } catch (error) {
+    elements.certifiedSqlList.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function renderCertifiedSqlList() {
+  elements.certifiedSqlList.innerHTML = certifiedSqlAssets.length
+    ? certifiedSqlAssets
+        .map(
+          (item) =>
+            `<button data-certified-sql="${escapeHtml(item.id)}" class="certified-sql-item${item.id === selectedCertifiedSqlId ? " active" : ""}"><span><strong>${escapeHtml(item.id)} · ${escapeHtml(item.title)}</strong><small>${escapeHtml(item.question)}</small></span><em class="${item.enabled && item.status === "certified" ? "ok" : ""}">${escapeHtml(item.status)}${item.enabled ? "" : " · 停用"}</em></button>`,
+        )
+        .join("")
+    : '<div class="empty">尚无认证 SQL。</div>';
+}
+
+function selectCertifiedSql(id) {
+  const asset = certifiedSqlAssets.find((item) => item.id === id);
+  if (!asset) return;
+  selectedCertifiedSqlId = asset.id;
+  elements.certifiedSqlHeading.textContent = `${asset.id} · ${asset.title}`;
+  elements.certifiedSqlMeta.textContent = `${asset.templatePath} · ${Object.keys(asset.parameters || {}).length} 个参数`;
+  elements.certifiedSqlId.value = asset.id;
+  elements.certifiedSqlId.disabled = true;
+  elements.certifiedSqlTitle.value = asset.title;
+  elements.certifiedSqlDescription.value = asset.description;
+  elements.certifiedSqlStatus.value = asset.status;
+  elements.certifiedSqlEnabled.checked = asset.enabled !== false;
+  elements.certifiedSqlQuestion.value = asset.question;
+  elements.certifiedSqlExamples.value = (asset.examples || []).join("\n");
+  elements.certifiedSqlParameters.value = stringifySimpleYaml(
+    asset.parameters || {},
+  );
+  elements.certifiedSqlEditor.value = asset.sql;
+  elements.deleteCertifiedSql.disabled = !certifiedSqlPublishEnabled;
+  elements.publishCertifiedSql.disabled = !certifiedSqlPublishEnabled;
+  clearCertifiedSqlStatus();
+  renderCertifiedSqlList();
+}
+
+function newCertifiedSql() {
+  selectedCertifiedSqlId = null;
+  elements.certifiedSqlHeading.textContent = "新建认证 SQL";
+  elements.certifiedSqlMeta.textContent =
+    "先保存为 draft，验证完成后再切换为 certified";
+  elements.certifiedSqlId.value = "";
+  elements.certifiedSqlId.disabled = false;
+  elements.certifiedSqlTitle.value = "";
+  elements.certifiedSqlDescription.value = "";
+  elements.certifiedSqlStatus.value = "draft";
+  elements.certifiedSqlEnabled.checked = true;
+  elements.certifiedSqlQuestion.value = "";
+  elements.certifiedSqlExamples.value = "";
+  elements.certifiedSqlParameters.value = "{}\n";
+  elements.certifiedSqlEditor.value =
+    "SELECT COUNT(*) AS result\nFROM tpch_100.orders\n";
+  elements.deleteCertifiedSql.disabled = true;
+  elements.publishCertifiedSql.disabled = !certifiedSqlPublishEnabled;
+  clearCertifiedSqlStatus();
+  renderCertifiedSqlList();
+  elements.certifiedSqlId.focus();
+}
+
+async function submitCertifiedSql(action) {
+  const payload = certifiedSqlFormPayload();
+  const endpoints = {
+    validate: "/api/certified-sql/validate",
+    explain: "/api/certified-sql/explain",
+    publish: "/api/certified-sql/publish",
+  };
+  const button = {
+    validate: elements.validateCertifiedSql,
+    explain: elements.explainCertifiedSql,
+    publish: elements.publishCertifiedSql,
+  }[action];
+  button.disabled = true;
+  elements.certifiedSqlStatusMessage.className = "source-edit-status pending";
+  elements.certifiedSqlStatusMessage.textContent =
+    action === "publish"
+      ? "正在校验、备份并发布…"
+      : action === "explain"
+        ? "正在校验并执行 EXPLAIN…"
+        : "正在执行参数和 SQL 安全校验…";
+  try {
+    const result = await api(endpoints[action], {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    elements.certifiedSqlStatusMessage.className = "source-edit-status ok";
+    elements.certifiedSqlStatusMessage.textContent =
+      action === "publish"
+        ? `已发布 ${result.asset.id} · ${result.replacing ? "已备份旧版本" : "新建资产"} · 无需重启`
+        : action === "explain"
+          ? `EXPLAIN 通过 · ${result.durationMs} ms`
+          : `校验通过 · ${result.placeholders.length} 个参数 · SQL Safety 通过`;
+    if (action === "explain") {
+      elements.certifiedSqlExplainResult.textContent = result.rows
+        .map((row) => Object.values(row).join(" "))
+        .join("\n");
+      elements.certifiedSqlExplainResult.classList.remove("hidden");
+    }
+    if (action === "publish") {
+      selectedCertifiedSqlId = result.asset.id;
+      await Promise.all([
+        loadCertifiedSqlAssets(result.asset.id),
+        loadExamples(),
+      ]);
+    }
+  } catch (error) {
+    elements.certifiedSqlStatusMessage.className = "source-edit-status bad";
+    elements.certifiedSqlStatusMessage.textContent = error.message;
+  } finally {
+    button.disabled = action === "publish" && !certifiedSqlPublishEnabled;
+  }
+}
+
+async function deleteCurrentCertifiedSql() {
+  if (!selectedCertifiedSqlId || !certifiedSqlPublishEnabled) return;
+  if (
+    !confirm(
+      `确认永久删除认证 SQL ${selectedCertifiedSqlId}？\n\nCatalog 和 SQL Template 会先自动备份。日常下线建议将状态改成 disabled。`,
+    )
+  )
+    return;
+  elements.deleteCertifiedSql.disabled = true;
+  try {
+    const result = await api(
+      `/api/certified-sql/${encodeURIComponent(selectedCertifiedSqlId)}`,
+      { method: "DELETE" },
+    );
+    selectedCertifiedSqlId = null;
+    await Promise.all([loadCertifiedSqlAssets(), loadExamples()]);
+    elements.certifiedSqlStatusMessage.className = "source-edit-status ok";
+    elements.certifiedSqlStatusMessage.textContent = `已删除 ${result.deleted} · 已保存 ${result.backupPaths.length} 个备份`;
+  } catch (error) {
+    elements.certifiedSqlStatusMessage.className = "source-edit-status bad";
+    elements.certifiedSqlStatusMessage.textContent = error.message;
+  } finally {
+    elements.deleteCertifiedSql.disabled =
+      !selectedCertifiedSqlId || !certifiedSqlPublishEnabled;
+  }
+}
+
+function certifiedSqlFormPayload() {
+  return {
+    id: elements.certifiedSqlId.value,
+    title: elements.certifiedSqlTitle.value,
+    description: elements.certifiedSqlDescription.value,
+    status: elements.certifiedSqlStatus.value,
+    enabled: elements.certifiedSqlEnabled.checked,
+    question: elements.certifiedSqlQuestion.value,
+    examples: elements.certifiedSqlExamples.value
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean),
+    parameters: parseSimpleYaml(elements.certifiedSqlParameters.value),
+    sql: elements.certifiedSqlEditor.value,
+  };
+}
+
+function parseSimpleYaml(value) {
+  // Parameter YAML is converted client-side by a deliberately small parser through JSON when possible;
+  // otherwise the server receives the raw object encoded by indentation below.
+  const text = String(value || "").trim();
+  if (!text || text === "{}") return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    const result = {};
+    let current;
+    for (const raw of text.split("\n")) {
+      if (!raw.trim() || raw.trim().startsWith("#")) continue;
+      const top = raw.match(/^([A-Za-z][A-Za-z0-9_]*):\s*$/);
+      if (top) {
+        current = top[1];
+        result[current] = {};
+        continue;
+      }
+      const field = raw.match(/^\s{2}([A-Za-z][A-Za-z0-9_]*):\s*(.*)$/);
+      if (!field || !current) throw new Error(`无法解析参数 YAML：${raw}`);
+      result[current][field[1]] = parseYamlScalar(field[2]);
+    }
+    return result;
+  }
+}
+
+function parseYamlScalar(value) {
+  const text = value.trim();
+  if (text === "true") return true;
+  if (text === "false") return false;
+  if (/^-?\d+(?:\.\d+)?$/.test(text)) return Number(text);
+  return text.replace(/^['"]|['"]$/g, "");
+}
+
+function stringifySimpleYaml(value) {
+  const lines = [];
+  for (const [name, schema] of Object.entries(value || {})) {
+    lines.push(`${name}:`);
+    for (const [key, item] of Object.entries(schema))
+      lines.push(
+        `  ${key}: ${typeof item === "string" ? item : JSON.stringify(item)}`,
+      );
+  }
+  return `${lines.join("\n")}${lines.length ? "\n" : "{}\n"}`;
+}
+
+function clearCertifiedSqlStatus() {
+  elements.certifiedSqlStatusMessage.classList.add("hidden");
+  elements.certifiedSqlExplainResult.classList.add("hidden");
 }
 
 async function loadModelerDatabases() {
@@ -505,10 +773,13 @@ async function loadExamples() {
         `<button class="example" data-question="${escapeHtml(query.question)}">${query.id} · ${escapeHtml(query.title)}</button>`,
     )
     .join("");
-  elements.examples.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-question]");
-    if (button) elements.question.value = button.dataset.question;
-  });
+  if (!elements.examples.dataset.bound) {
+    elements.examples.dataset.bound = "true";
+    elements.examples.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-question]");
+      if (button) elements.question.value = button.dataset.question;
+    });
+  }
 }
 
 async function loadSemanticModel() {

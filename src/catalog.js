@@ -1,6 +1,6 @@
 const {
   getQuery: getSqlTemplateQuery,
-  tpchQueries,
+  currentTpchQueries,
 } = require("./sql-templates");
 const { compileVerifiedQueries } = require("./compiler");
 const { loadManifest } = require("./manifest");
@@ -14,7 +14,7 @@ function currentSemanticQueries() {
 function listQueries() {
   return [
     ...Object.values(currentSemanticQueries()),
-    ...Object.values(tpchQueries),
+    ...Object.values(currentTpchQueries()),
   ].map((query) => ({
     id: query.id,
     title: query.title,
@@ -34,5 +34,4 @@ module.exports = {
   currentSemanticQueries,
   getQuery,
   listQueries,
-  tpchQueries,
 };

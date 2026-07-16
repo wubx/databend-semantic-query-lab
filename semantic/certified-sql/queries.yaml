@@ -1,0 +1,91 @@
+queries:
+  - id: Q1
+    title: TPC-H Q1 定价汇总报表
+    description: 按退货标记和订单状态汇总 lineitem 定价信息。
+    status: certified
+    enabled: true
+    question: 执行 TPC-H Q1 定价汇总报表。
+    examples:
+      - 执行 TPC-H Q1
+      - 运行 Q1 定价汇总报表
+      - TPC-H Q1
+    template: templates/q1.sql
+    parameters:
+      days:
+        type: integer
+        default: 90
+        minimum: 1
+        maximum: 3650
+        description: 从 TPC-H 截止日期向前偏移的天数。
+    governance:
+      owner: demo-team
+      verified_by: demo-team
+
+  - id: Q6
+    title: TPC-H Q6 收入变化预测
+    description: 使用可控折扣范围、数量和日期参数计算折扣收入。
+    status: certified
+    enabled: true
+    question: 执行 Q6，折扣在 5% 到 7% 之间，数量小于 24。
+    examples:
+      - 执行 Q6，折扣在 5% 到 7% 之间，数量小于 24
+      - 运行 TPC-H Q6
+      - Q6 收入预测
+    template: templates/q6.sql
+    parameters:
+      startDate:
+        type: date
+        default: 1994-01-01
+        description: 查询开始日期（含）。
+      endDate:
+        type: date
+        default: 1995-01-01
+        description: 查询结束日期（不含）。
+      discountMin:
+        type: number
+        default: 0.05
+        minimum: 0
+        maximum: 1
+        description: 最低折扣率。
+      discountMax:
+        type: number
+        default: 0.07
+        minimum: 0
+        maximum: 1
+        description: 最高折扣率。
+      quantity:
+        type: number
+        default: 24
+        minimum: 0
+        maximum: 1000000
+        description: 商品数量上限。
+    governance:
+      owner: demo-team
+      verified_by: demo-team
+
+  - id: Q21
+    title: TPC-H Q21 等待订单供应商
+    description: 使用 EXISTS 和 NOT EXISTS 查询导致已完成订单等待的供应商。
+    status: certified
+    enabled: true
+    question: 查询沙特阿拉伯导致已完成订单等待的供应商。
+    examples:
+      - 执行 TPC-H Q21
+      - 查询沙特阿拉伯等待订单的供应商
+      - 运行 Q21
+    template: templates/q21.sql
+    parameters:
+      nation:
+        type: string
+        default: SAUDI ARABIA
+        maxLength: 100
+        description: 国家名称。
+      limit:
+        type: integer
+        default: 100
+        minimum: 1
+        maximum: 1000
+        description: 最大返回行数。
+    governance:
+      owner: demo-team
+      verified_by: demo-team
