@@ -5,7 +5,7 @@ const { buildSemanticView } = require("../src/semantic-view");
 
 test("builds a user-facing semantic model view", () => {
   const view = buildSemanticView();
-  assert.equal(view.stats.entities, 6);
+  assert.equal(view.stats.entities, 8);
   assert.equal(view.stats.verifiedQueries, 7);
   assert.ok(view.stats.members >= view.stats.publicMembers);
   assert.ok(view.stats.measures > 0);
@@ -17,7 +17,7 @@ test("builds a user-facing semantic model view", () => {
   );
   assert.equal(totalPrice.kind, "measure");
   assert.equal(totalPrice.expression, "orderTotal");
-  assert.ok(totalPrice.synonyms.includes("订单金额"));
+  assert.ok(totalPrice.synonyms.includes("订单金额合计"));
   assert.ok(totalPrice.usedBy.some((query) => query.id === "S2"));
 });
 

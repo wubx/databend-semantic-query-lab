@@ -1,0 +1,172 @@
+entity:
+  name: Part
+  title: 商品
+  description: TPC-H SF100 测试数据中的商品主数据，一行代表一个商品或零件，以商品主键唯一标识。用于按制造商、品牌、类型、尺寸和包装容器分析商品；当前语义定义为草稿，需人工审核。
+  source:
+    schema: tpch_100
+    table: part
+  keys:
+    primary: partkey
+  dimensions:
+    - name: partkey
+      title: 商品编号
+      description: 商品或零件的唯一标识，对应商品主表的主键。
+      expr: p_partkey
+      type: number
+      status: draft
+      business_definition: 用于唯一识别一条商品记录的编号，不应作为可加总数值分析。
+      synonyms:
+        - 商品ID
+        - 商品主键
+        - 产品编号
+        - 零件编号
+        - Part Key
+        - Part ID
+        - Product ID
+    - name: name
+      title: 商品名称
+      description: 商品或零件的名称。
+      expr: p_name
+      type: string
+      status: draft
+      business_definition: 用于展示、检索和区分商品的文本名称。
+      synonyms:
+        - 产品名称
+        - 零件名称
+        - 品名
+        - Part Name
+        - Product Name
+        - Item Name
+    - name: mfgr
+      title: 制造商
+      description: 商品对应的制造商信息。
+      expr: p_mfgr
+      type: string
+      status: draft
+      business_definition: 标识商品的制造商，可用于按制造商对商品进行分类和分析。
+      synonyms:
+        - 生产商
+        - 厂商
+        - 商品制造商
+        - Manufacturer
+        - Maker
+        - Producer
+    - name: brand
+      title: 商品品牌
+      description: 商品所属的品牌。
+      expr: p_brand
+      type: string
+      status: draft
+      business_definition: 标识商品的品牌，可用于品牌维度的商品分析。
+      synonyms:
+        - 品牌
+        - 产品品牌
+        - Part Brand
+        - Product Brand
+        - Brand
+    - name: type
+      title: 商品类型
+      description: 商品或零件的类型描述。
+      expr: p_type
+      type: string
+      status: draft
+      business_definition: 用于按照商品类型对商品进行分类和分析。
+      synonyms:
+        - 产品类型
+        - 零件类型
+        - 品类类型
+        - Part Type
+        - Product Type
+        - Item Type
+    - name: container
+      title: 包装容器
+      description: 商品使用的包装容器描述。
+      expr: p_container
+      type: string
+      status: draft
+      business_definition: 表示商品的包装或容器类别，可作为商品分析维度。
+      synonyms:
+        - 商品包装
+        - 包装类型
+        - 容器
+        - Container
+        - Package
+        - Packaging Type
+    - name: comment
+      title: 商品备注
+      description: 与商品记录相关的备注文本。
+      expr: p_comment
+      type: string
+      status: draft
+      business_definition: 保存商品记录附带的补充说明或备注，不代表结构化分类。
+      synonyms:
+        - 商品说明
+        - 产品备注
+        - 零件备注
+        - 备注
+        - Part Comment
+        - Product Comment
+        - Comment
+  time_dimensions: []
+  facts:
+    - name: size
+      title: 商品尺寸
+      description: 商品或零件的尺寸数值；具体单位需人工确认。
+      expr: p_size
+      type: number
+      status: draft
+      business_definition: 表示商品的尺寸属性，可用于尺寸维度的分组或数值分析，但当前元数据未提供计量单位。
+      synonyms:
+        - 产品尺寸
+        - 零件尺寸
+        - 规格尺寸
+        - Part Size
+        - Product Size
+        - Item Size
+    - name: retailprice
+      title: 零售价格候选值
+      description: 商品的零售价格候选字段；币种及具体业务含义需人工确认，不应解释为实际成交价或销售收入。
+      expr: p_retailprice
+      type: decimal
+      status: draft
+      business_definition: 记录商品层级的零售价格候选数值。该字段不是销售交易金额，也不表示已实现收入。
+      synonyms:
+        - 商品零售价格
+        - 产品零售价
+        - 零售价格
+        - Part Retail Price
+        - Product Retail Price
+        - Retail Price
+  metrics:
+    - name: count
+      title: 商品数量
+      description: 按商品主键统计商品表记录数的草稿指标，需人工确认统计口径。
+      type: count
+      expr: partkey
+      status: draft
+      business_definition: 统计商品主数据中的记录数量；在商品主键唯一的前提下，可用于表示商品数量。
+      synonyms:
+        - 产品数量
+        - 零件数量
+        - 商品数
+        - Part Count
+        - Product Count
+        - Number of Parts
+    - name: totalRetailprice
+      title: 零售价格合计
+      description: 对零售价格候选字段求和的草稿指标；币种、可加性和业务用途需人工确认，不应作为销售收入。
+      type: sum
+      expr: retailprice
+      status: draft
+      business_definition: 汇总所选商品记录的零售价格候选值。该合计不代表实际成交金额、销售额或收入。
+      synonyms:
+        - 商品零售价格总计
+        - 零售价合计
+        - 零售价格总和
+        - Total Retail Price
+        - Sum of Retail Price
+        - Retail Price Total
+  governance:
+    status: draft
+    generated: true
+    requires_human_review: true

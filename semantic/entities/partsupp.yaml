@@ -1,0 +1,129 @@
+entity:
+  name: Partsupp
+  title: 商品供货关系
+  description: TPC-H SF100 测试数据中的商品与供应商供货组合数据集；每行表示一个商品与一个供应商之间的供货关系，包含可供数量、供货成本和备注信息。本语义模型为草稿，需人工确认业务口径及键定义。
+  source:
+    schema: tpch_100
+    table: partsupp
+  keys:
+    primary: partkey
+  dimensions:
+    - name: partkey
+      title: 商品编号
+      description: 供货关系中的商品标识，来源于 ps_partkey，可用于关联商品数据。草稿字段，需人工复核。
+      expr: ps_partkey
+      type: number
+      status: draft
+      business_definition: 标识该供货关系所对应的商品或零件。业务背景表明该字段与商品表的 p_partkey 对应，但它本身不足以唯一标识一条商品供货关系。
+      synonyms:
+        - 商品ID
+        - 商品键
+        - 产品编号
+        - 零件编号
+        - Part Key
+        - Part ID
+        - Product ID
+    - name: suppkey
+      title: 供应商编号
+      description: 供货关系中的供应商标识，来源于 ps_suppkey。草稿字段，需人工复核。
+      expr: ps_suppkey
+      type: number
+      status: draft
+      business_definition: 标识为对应商品提供供货的供应商；业务背景表明该字段后续可与供应商数据的 s_suppkey 对应。
+      synonyms:
+        - 供应商ID
+        - 供应商键
+        - 供货商编号
+        - Supplier Key
+        - Supplier ID
+        - Vendor ID
+    - name: comment
+      title: 供货关系备注
+      description: 商品与供应商供货关系的文本备注，来源于 ps_comment。草稿字段，需人工复核其具体用途。
+      expr: ps_comment
+      type: string
+      status: draft
+      business_definition: 记录商品供货关系附带的备注或说明文本；现有元数据未定义其内容格式或分类规则。
+      synonyms:
+        - 供货备注
+        - 关系备注
+        - 备注
+        - Supply Comment
+        - Supplier-Part Comment
+        - Comment
+  time_dimensions: []
+  facts:
+    - name: availqty
+      title: 可供数量
+      description: 商品在对应供应商供货关系下的可供数量字段，来源于 ps_availqty。草稿字段，其是否表示当前库存、可供库存或测试值需人工确认。
+      expr: ps_availqty
+      type: number
+      status: draft
+      business_definition: 记录特定商品与供应商组合对应的可供数量；现有元数据未提供库存时点、历史口径或缺货判定规则。
+      synonyms:
+        - 可供应数量
+        - 供货可用数量
+        - 可供货数量
+        - Available Quantity
+        - Available Supply Quantity
+        - Avail Qty
+    - name: supplycost
+      title: 供货成本
+      description: 商品在对应供应商供货关系下的供货成本字段，来源于 ps_supplycost。草稿字段，币种及具体业务口径需人工确认。
+      expr: ps_supplycost
+      type: decimal
+      status: draft
+      business_definition: 记录特定商品与供应商组合对应的供货成本值；不得在未结合数量及明确业务规则的情况下解释为总成本。
+      synonyms:
+        - 供应成本
+        - 供货成本值
+        - Supplier Cost
+        - Supply Cost
+        - Supply Cost Value
+  metrics:
+    - name: count
+      title: 商品供货关系数量
+      description: 统计商品供货关系数据行数的草稿指标；其业务粒度及去重口径需人工确认。
+      type: count
+      expr: partkey
+      status: draft
+      business_definition: 按照当前模型的 count 聚合定义，对 partkey 表达式进行计数，用于表示数据中的商品供货关系记录数量候选指标。
+      synonyms:
+        - 供货关系数
+        - 商品供应关系数量
+        - 记录数
+        - Part-Supplier Relationship Count
+        - Supply Relationship Count
+        - Row Count
+    - name: totalAvailqty
+      title: 可供数量合计
+      description: 对 availqty 求和得到的可供数量候选指标。该指标为草稿，需确认数量的业务含义及汇总适用性。
+      type: sum
+      expr: availqty
+      status: draft
+      business_definition: 在当前查询分组范围内汇总各商品与供应商供货关系记录的可供数量；不表示特定库存时点或库存历史。
+      synonyms:
+        - 可供总量
+        - 可供应数量合计
+        - 供货可用数量总和
+        - Total Available Quantity
+        - Sum of Available Quantity
+        - Total Avail Qty
+    - name: totalSupplycost
+      title: 供货成本字段合计
+      description: 对 supplycost 字段直接求和得到的候选指标。该指标为草稿，币种、可加性及业务用途均需人工确认。
+      type: sum
+      expr: supplycost
+      status: draft
+      business_definition: 在当前查询分组范围内对各商品与供应商供货关系记录的供货成本值求和；该结果不包含可供数量的乘算，不应直接解释为总成本。
+      synonyms:
+        - 供货成本值合计
+        - 供应成本字段总和
+        - 供货成本求和
+        - Sum of Supply Cost
+        - Total Supply Cost Values
+        - Supply Cost Sum
+  governance:
+    status: draft
+    generated: true
+    requires_human_review: true

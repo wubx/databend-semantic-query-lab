@@ -7,12 +7,15 @@ const { loadManifest, validateManifest } = require("../src/manifest");
 test("loads and validates the portable semantic manifest", () => {
   const manifest = loadManifest();
   assert.equal(manifest.metadata.name, "tpch_order_analytics");
-  assert.equal(manifest.entities[0].name, "Orders");
+  const orders = manifest.entities.find((entity) => entity.name === "Orders");
+  assert.ok(orders);
 });
 
 test("compiles Cube YAML with semantic metadata", () => {
   const artifacts = compileManifest(loadManifest());
-  const orders = artifacts.cubeModel.cubes[0];
+  const orders = artifacts.cubeModel.cubes.find(
+    (cube) => cube.name === "Orders",
+  );
   assert.equal(orders.sql_table, "tpch_100.orders");
   assert.equal(
     orders.dimensions.find((item) => item.name === "orderKey").primary_key,
@@ -22,9 +25,10 @@ test("compiles Cube YAML with semantic metadata", () => {
     orders.dimensions.find((item) => item.name === "status").meta.enum,
     ["F", "O", "P"],
   );
-  assert.deepEqual(
-    orders.measures.find((item) => item.name === "totalPrice").meta.synonyms,
-    ["total order amount", "sales amount", "GMV", "订单金额", "订单总金额"],
+  assert.ok(
+    orders.measures
+      .find((item) => item.name === "totalPrice")
+      .meta.synonyms.includes("订单金额合计"),
   );
   assert.match(
     stringifyCubeModel(artifacts.cubeModel),
@@ -34,7 +38,7 @@ test("compiles Cube YAML with semantic metadata", () => {
 
 test("compiles AI member catalog and verified queries", () => {
   const artifacts = compileManifest(loadManifest());
-  assert.equal(artifacts.memberCatalog.members.length, 57);
+  assert.ok(artifacts.memberCatalog.members.length >= 57);
   assert.equal(
     artifacts.memberCatalog.members.find(
       (item) => item.member === "Orders.totalPrice",

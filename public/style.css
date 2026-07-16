@@ -566,6 +566,83 @@ td {
 .semantic-subview.active {
   display: block;
 }
+.source-browser {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 680px;
+}
+.source-sidebar {
+  padding: 15px 10px;
+  border-right: 1px solid #203b50;
+  background: #071522;
+}
+.source-sidebar > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 7px 12px;
+  color: #a9c0d2;
+  font-size: 12px;
+}
+.source-sidebar > div span {
+  color: #607e96;
+  font-size: 10px;
+}
+.source-sidebar nav {
+  display: grid;
+  gap: 12px;
+}
+.source-sidebar section h4 {
+  margin: 0 7px 5px;
+  color: #506f87;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.source-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  color: #9fb7ca;
+  background: transparent;
+  text-align: left;
+}
+.source-file:hover {
+  background: #102438;
+}
+.source-file.active {
+  color: #5ee1c8;
+  background: #102b3d;
+  box-shadow: inset 3px 0 #4cd9bd;
+}
+.source-file > span {
+  color: #4f8193;
+  font-size: 10px;
+}
+.source-file div,
+.source-file strong,
+.source-file small {
+  display: block;
+  min-width: 0;
+}
+.source-file strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.source-file small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #527189;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-content {
+  min-width: 0;
+}
 .source-card {
   padding: 0;
   overflow: hidden;
@@ -956,6 +1033,16 @@ td {
   .generator-controls,
   .modeler-body {
     grid-template-columns: 1fr;
+  }
+  .source-browser {
+    grid-template-columns: 1fr;
+  }
+  .source-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid #203b50;
+  }
+  .source-sidebar nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .semantic-sidebar {
     position: static;

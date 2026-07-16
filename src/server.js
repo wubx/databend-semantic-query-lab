@@ -33,6 +33,10 @@ const {
 } = require("./semantic-gateway");
 const { validateSql } = require("./sql-safety");
 const { assembleManifest, stringifyManifest } = require("./semantic-assembler");
+const {
+  listSemanticSourceFiles,
+  readSemanticSourceFile,
+} = require("./semantic-source-files");
 
 const app = express();
 const port = Number(process.env.PORT || 4100);
@@ -81,9 +85,13 @@ app.get("/api/query/examples", (_req, res) =>
 
 app.get("/api/semantic-model", (_req, res) => res.json(buildSemanticView()));
 
-app.get("/api/semantic-model/source", (_req, res) => {
-  const source = stringifyManifest(assembleManifest());
-  res.type("text/yaml").send(source);
+app.get("/api/semantic-model/sources", (_req, res) => {
+  res.json({ files: listSemanticSourceFiles() });
+});
+
+app.get("/api/semantic-model/source", (req, res) => {
+  const source = readSemanticSourceFile(String(req.query.file || "compiled"));
+  res.json(source);
 });
 
 app.get(

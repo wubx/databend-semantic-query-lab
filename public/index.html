@@ -177,24 +177,39 @@
         </div>
         <div id="semanticSourceView" class="semantic-subview">
           <section class="card source-card">
-            <div class="card-title">
-              <div>
-                <span>semantic/semantic-manifest.yaml</span>
-                <p>当前运行时权威语义源 · 只读</p>
-              </div>
-              <div class="source-actions">
-                <span id="sourceMeta" class="badge subtle">尚未加载</span>
-                <button id="copySource" class="tiny">复制 YAML</button>
-                <button id="downloadSource" class="tiny primary">下载</button>
+            <div class="source-browser">
+              <aside class="source-sidebar">
+                <div>
+                  <strong>语义模型文件</strong
+                  ><span id="sourceFileCount">加载中…</span>
+                </div>
+                <nav id="sourceFileList"></nav>
+              </aside>
+              <div class="source-content">
+                <div class="card-title">
+                  <div>
+                    <span id="sourceFilePath">选择左侧文件</span>
+                    <p id="sourceFileDescription">
+                      模块化维护源和完整运行时编译结果 · 只读
+                    </p>
+                  </div>
+                  <div class="source-actions">
+                    <span id="sourceMeta" class="badge subtle">尚未加载</span>
+                    <button id="copySource" class="tiny">复制 YAML</button>
+                    <button id="downloadSource" class="tiny primary">
+                      下载
+                    </button>
+                  </div>
+                </div>
+                <div class="source-legend">
+                  <span>实体与成员</span><span>关系</span><span>认证查询</span
+                  ><span>AI Policy</span>
+                </div>
+                <pre id="semanticSource" class="code semantic-source">
+正在加载语义模型文件…</pre
+                >
               </div>
             </div>
-            <div class="source-legend">
-              <span>实体与成员</span><span>关系</span><span>认证查询</span
-              ><span>AI Policy</span>
-            </div>
-            <pre id="semanticSource" class="code semantic-source">
-正在加载原始 Manifest…</pre
-            >
           </section>
         </div>
         <div id="semanticGeneratorView" class="semantic-subview">

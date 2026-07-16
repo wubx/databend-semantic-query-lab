@@ -35,6 +35,10 @@ const elements = Object.fromEntries(
     "semanticSourceView",
     "semanticSource",
     "sourceMeta",
+    "sourceFileCount",
+    "sourceFileList",
+    "sourceFilePath",
+    "sourceFileDescription",
     "copySource",
     "downloadSource",
     "semanticGeneratorView",
@@ -53,6 +57,8 @@ let semanticModel;
 let selectedEntity = "all";
 let selectedKind = "all";
 let semanticSourceText = "";
+let semanticSourceFiles = [];
+let selectedSourceFile = "compiled";
 let modelerDatabases = [];
 let generatedDraftState = new Map();
 
@@ -63,7 +69,7 @@ async function boot() {
     loadHealth(),
     loadExamples(),
     loadSemanticModel(),
-    loadSemanticSource(),
+    loadSemanticSourceFiles(),
     loadModelerDatabases(),
   ]);
   elements.plan.addEventListener("click", () => plan(false));
@@ -94,6 +100,10 @@ async function boot() {
     );
   elements.copySource.addEventListener("click", copySemanticSource);
   elements.downloadSource.addEventListener("click", downloadSemanticSource);
+  elements.sourceFileList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-source-file]");
+    if (button) loadSemanticSource(button.dataset.sourceFile);
+  });
   elements.databaseSelect.addEventListener("change", loadModelerTables);
   elements.tableSelector.addEventListener("change", updateModelerSelection);
   elements.generateModel.addEventListener("click", generateModelDrafts);
@@ -252,7 +262,7 @@ async function handleDraftAction(event) {
         : `校验通过：${result.replacing ? "将覆盖现有实体" : "将新增实体"} ${result.target}`;
     generatedDraftState.set(card.dataset.draft, editor.value);
     if (action === "publish") {
-      await Promise.all([loadSemanticModel(), loadSemanticSource()]);
+      await Promise.all([loadSemanticModel(), loadSemanticSourceFiles()]);
     }
   } catch (error) {
     status.className = "draft-validation bad";
@@ -264,13 +274,42 @@ async function handleDraftAction(event) {
   }
 }
 
-async function loadSemanticSource() {
-  const response = await fetch("/api/semantic-model/source");
-  if (!response.ok) throw new Error(`Manifest source HTTP ${response.status}`);
-  semanticSourceText = await response.text();
+async function loadSemanticSourceFiles() {
+  const response = await api("/api/semantic-model/sources");
+  semanticSourceFiles = response.files;
+  elements.sourceFileCount.textContent = `${semanticSourceFiles.length} 个文件`;
+  renderSemanticSourceFiles();
+  await loadSemanticSource(selectedSourceFile);
+}
+
+function renderSemanticSourceFiles() {
+  const groups = semanticSourceFiles.reduce((result, file) => {
+    if (!result.has(file.group)) result.set(file.group, []);
+    result.get(file.group).push(file);
+    return result;
+  }, new Map());
+  elements.sourceFileList.innerHTML = [...groups.entries()]
+    .map(
+      ([group, files]) =>
+        `<section><h4>${escapeHtml(group)}</h4>${files.map((file) => `<button class="source-file${file.id === selectedSourceFile ? " active" : ""}" data-source-file="${escapeHtml(file.id)}"><span>${file.generated ? "◆" : "◇"}</span><div><strong>${escapeHtml(file.name)}</strong><small>${escapeHtml(file.path)}</small></div></button>`).join("")}</section>`,
+    )
+    .join("");
+}
+
+async function loadSemanticSource(file = "compiled") {
+  selectedSourceFile = file;
+  const source = await api(
+    `/api/semantic-model/source?file=${encodeURIComponent(file)}`,
+  );
+  semanticSourceText = source.content;
   elements.semanticSource.innerHTML = highlightYaml(semanticSourceText);
+  elements.sourceFilePath.textContent = source.path;
+  elements.sourceFileDescription.textContent = source.generated
+    ? "由模块化语义源实时组装的完整运行时 Manifest · 只读"
+    : "可维护的模块化语义源文件 · 只读";
   const lineCount = semanticSourceText.split("\n").length;
   elements.sourceMeta.textContent = `${lineCount} 行 · ${formatBytes(new Blob([semanticSourceText]).size)}`;
+  renderSemanticSourceFiles();
 }
 
 async function copySemanticSource() {
@@ -287,7 +326,10 @@ function downloadSemanticSource() {
   link.href = URL.createObjectURL(
     new Blob([semanticSourceText], { type: "text/yaml" }),
   );
-  link.download = "semantic-manifest.yaml";
+  link.download =
+    selectedSourceFile === "compiled"
+      ? "semantic-manifest.yaml"
+      : selectedSourceFile.split("/").pop();
   link.click();
   URL.revokeObjectURL(link.href);
 }
