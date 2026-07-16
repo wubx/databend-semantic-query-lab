@@ -1,7 +1,7 @@
 entity:
   name: Customer
   title: 客户
-  description: TPC-H customers who place orders.
+  description: TPC-H SF100 决策支持测试数据中的客户主题，用于按客户、国家编号和市场细分分析客户数量及候选账户余额信息；不代表真实生产客户数据。
   source:
     schema: tpch_100
     table: customer
@@ -13,53 +13,92 @@ entity:
       expr: c_custkey
       type: number
       synonyms:
-        - customer id
         - 客户编号
+        - 客户ID
+        - 客户标识
+        - customer key
+        - customer id
+        - customer identifier
+      description: 唯一标识客户的编号，是客户实体的主键。
+      business_definition: 客户记录的唯一标识；在当前数据粒度下，一行代表一个客户。
     - name: name
       title: 客户名称
       expr: c_name
       type: string
       synonyms:
-        - customer name
         - 客户名称
+        - 客户名
+        - customer name
+        - client name
+      description: 客户记录中保存的名称。
+      business_definition: 用于识别和展示客户的名称信息。
     - name: nationKey
       title: 国家编号
       expr: c_nationkey
       type: number
       synonyms:
+        - 国家编号
+        - 国家ID
+        - 国家标识
+        - nation key
         - nation id
         - country id
-        - 国家编号
+      description: 客户所属国家的标识编号。
+      business_definition: 用于按客户所属国家编号进行分组和分析的维度。
     - name: marketSegment
-      title: 市场细分
+      title: 客户市场细分
       expr: c_mktsegment
       type: string
       synonyms:
-        - market segment
-        - 客户细分
+        - 客户市场细分
         - 市场细分
+        - 客户细分
+        - market segment
+        - customer segment
+        - customer market segment
+      description: 客户所属的市场细分类别。
+      business_definition: 用于按市场细分对客户进行分组和比较的业务维度。
   facts:
     - name: accountBalance
       title: 客户账户余额
       expr: c_acctbal
       type: decimal
+      description: 客户记录中的账户余额候选字段，其币种和业务口径尚待人工确认。
+      business_definition: 表示单个客户记录中的账户余额值；当前为草稿候选字段，不预设币种，也不确认其是否适合跨客户汇总。
+      synonyms:
+        - 客户账户余额
+        - 客户余额
+        - 账户余额
+        - customer account balance
+        - account balance
+        - customer balance
   metrics:
     - name: count
       title: 客户数量
-      description: Number of customers.
+      description: 按客户编号统计的客户数量草稿指标。
       type: count
       expr: customerKey
       synonyms:
-        - customer count
         - 客户数量
+        - 客户数
+        - 客户总数
+        - customer count
+        - number of customers
+        - total customers
+      business_definition: 基于客户编号统计客户记录数量；客户表一行代表一个客户，并以客户编号作为主键。
     - name: totalAccountBalance
-      title: 客户账户余额总计
-      description: Sum of customer account balances.
+      title: 客户账户余额总计（待确认）
+      description: 对客户账户余额求和得到的草稿候选指标，需确认币种以及是否允许跨客户汇总。
       type: sum
       expr: accountBalance
       synonyms:
-        - total account balance
+        - 客户账户余额总计
         - 客户余额总计
+        - 账户余额合计
+        - total customer account balance
+        - total account balance
+        - sum of customer account balances
+      business_definition: 汇总客户账户余额字段的合计值；该指标仅为待确认草稿，不预设币种，跨客户汇总的业务适用性需人工审核。
   extensions:
     cube:
       refresh_key: false

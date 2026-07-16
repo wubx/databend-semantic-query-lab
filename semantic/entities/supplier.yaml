@@ -1,7 +1,7 @@
 entity:
   name: Supplier
   title: 供应商
-  description: TPC-H suppliers that fulfill line items.
+  description: TPC-H SF100 决策支持测试数据中的供应商主题，一行代表一个供应商，用于分析供应商基本信息、国家分布及账户余额；该数据不是真实生产数据。
   source:
     schema: tpch_100
     table: supplier
@@ -13,45 +13,79 @@ entity:
       expr: s_suppkey
       type: number
       synonyms:
-        - supplier id
-        - 供应商编号
+        - 供应商ID
+        - 供应商标识
+        - 供应商编码
+        - supplier ID
+        - supplier key
+        - supplier identifier
+      description: 供应商的主键编号，用于唯一标识一条供应商记录。
+      business_definition: 供应商表中的唯一标识，来源于 s_suppkey，不应作为可加总的业务数值使用。
     - name: name
       title: 供应商名称
       expr: s_name
       type: string
       synonyms:
+        - 供应商名
+        - 供货商名称
         - supplier name
-        - 供应商名称
+        - vendor name
+      description: 供应商记录中的名称。
+      business_definition: 用于识别和展示供应商的名称，来源于 s_name。
     - name: nationKey
       title: 国家编号
       expr: s_nationkey
       type: number
       synonyms:
-        - nation id
-        - country id
-        - 国家编号
+        - 国家ID
+        - 国家标识
+        - 所属国家编号
+        - nation ID
+        - nation key
+        - country ID
+      description: 供应商所属国家的编号。
+      business_definition: 标识供应商所属国家的编号，来源于 s_nationkey，不应作为可加总的业务数值使用。
   facts:
     - name: accountBalance
       title: 供应商账户余额
       expr: s_acctbal
       type: decimal
+      description: 供应商记录中的账户余额候选字段。
+      business_definition: 来源于 s_acctbal 的供应商账户余额值；不代表收入，其币种及是否允许汇总需要人工确认。
+      synonyms:
+        - 供应商余额
+        - 账户余额
+        - 供应商账户结余
+        - supplier account balance
+        - supplier balance
+        - account balance
   metrics:
     - name: count
       title: 供应商数量
-      description: Number of suppliers.
+      description: 按供应商编号统计的供应商数量。
       type: count
       expr: supplierKey
       synonyms:
+        - 供应商数
+        - 供货商数量
+        - 供应商总数
         - supplier count
-        - 供应商数量
+        - number of suppliers
+        - vendor count
+      business_definition: 以 supplierKey 为统计表达式计算供应商记录数量，用于衡量供应商规模；该指标保持草稿状态。
     - name: totalAccountBalance
       title: 供应商账户余额总计
-      description: Sum of supplier account balances.
+      description: 对供应商账户余额求和得到的汇总值。
       type: sum
       expr: accountBalance
       synonyms:
-        - supplier balance
         - 供应商余额总计
+        - 供应商账户余额合计
+        - 账户余额总和
+        - total supplier account balance
+        - supplier balance total
+        - sum of supplier balances
+      business_definition: 对 accountBalance 执行求和计算；该值不应解释为收入，币种及账户余额是否允许汇总需要人工确认，并保持草稿状态。
   extensions:
     cube:
       refresh_key: false

@@ -1,7 +1,7 @@
 entity:
   name: Orders
   title: 订单
-  description: TPC-H customer purchase orders.
+  description: 基于 Databend 中 tpch_100.orders 表的订单主题草稿语义模型，用于按订单状态、订单优先级和下单日期分析订单数量及订单记录金额。数据来自 TPC-H SF100 决策支持测试集，不代表真实生产业务。
   source:
     schema: tpch_100
     table: orders
@@ -10,91 +10,125 @@ entity:
   dimensions:
     - name: orderKey
       title: 订单编号
-      description: Unique identifier of an order.
+      description: 每张订单的唯一标识，也是订单数据的主键。
       expr: o_orderkey
       type: number
       synonyms:
-        - order id
-        - order number
         - 订单号
-        - 订单编号
+        - 订单 ID
+        - 订单标识
+        - order ID
+        - order number
+        - order key
+      business_definition: 用于唯一识别一张订单的编号，对应 orders 表的 o_orderkey；每行订单记录对应一个订单编号。
     - name: customerKey
       title: 客户编号
-      description: Identifier of the customer that placed the order.
+      description: 下达该订单的客户标识。
       expr: o_custkey
       type: number
       synonyms:
-        - customer id
+        - 客户号
         - 客户 ID
-        - 客户编号
+        - 客户标识
+        - customer ID
+        - customer number
+        - customer key
+      business_definition: 用于标识订单所属客户的编号，对应 orders 表的 o_custkey，可用于关联客户主题；该字段是维度或关联键，不作为求和指标。
     - name: status
       title: 订单状态
-      description: F is fulfilled, O is open, and P is pending.
+      description: 订单记录中的状态代码，包括 F、O 和 P。
       expr: o_orderstatus
       type: string
       synonyms:
-        - status
-        - order state
-        - 订单状态
         - 订单阶段
+        - 状态代码
+        - 订单状态代码
+        - order status
+        - order state
+        - status code
       enum:
         - F
         - O
         - P
+      business_definition: 订单当前状态的代码，对应 orders 表的 o_orderstatus。现有元数据将 F 描述为已完成、O 描述为未完成或开放、P 描述为处理中或待处理；最终中文展示名称仍需人工确认。
     - name: priority
       title: 订单优先级
-      description: Processing priority assigned to an order.
+      description: 分配给订单的处理优先级。
       expr: o_orderpriority
       type: string
       synonyms:
-        - priority
+        - 优先级
+        - 订单处理优先级
+        - 处理优先级
         - order priority
-        - 订单优先级
+        - processing priority
+        - priority
+      business_definition: 用于表示订单处理优先顺序的分类字段，对应 orders 表的 o_orderpriority。
   time_dimensions:
     - name: orderDate
-      title: 订单日期
-      description: Date on which the order was placed.
+      title: 下单日期
+      description: 订单被下达或记录的日期。
       expr: o_orderdate
       type: time
       synonyms:
+        - 订单日期
+        - 下单时间
+        - 订单时间
         - order date
         - order time
-        - 下单日期
-        - 订单时间
+        - purchase order date
+      business_definition: 订单的下单日期，对应 orders 表的 o_orderdate，可作为订单分析的时间维度。
   facts:
     - name: orderTotal
-      title: 单笔订单金额
-      description: Total price recorded on an individual order.
+      title: 单笔订单记录金额
+      description: 单张订单记录的总价格字段。
       expr: o_totalprice
       type: decimal
+      business_definition: 订单粒度的金额事实，对应 orders 表的 o_totalprice。该字段表示数据中记录的单笔订单总价格；币种及实际业务口径尚未确认。
+      synonyms:
+        - 单笔订单金额
+        - 订单记录金额
+        - 订单总价
+        - order total
+        - order total price
+        - recorded order amount
   metrics:
     - name: count
       title: 订单数量
-      description: Number of orders.
+      description: 订单记录的数量。
       type: count
       expr: orderKey
       synonyms:
+        - 订单数
+        - 订单总数
+        - 订单笔数
         - order count
         - number of orders
-        - 订单数量
-        - 订单总数
+        - total orders
+      business_definition: 按订单主键 orderKey 统计的订单数量，用于衡量当前分析范围内包含多少张订单。
     - name: totalPrice
-      title: 订单总金额
-      description: Sum of total prices across orders.
+      title: 订单记录金额合计
+      description: 对各订单记录的总价格进行求和得到的候选指标。
       type: sum
       expr: orderTotal
       synonyms:
-        - total order amount
-        - sales amount
-        - GMV
-        - 订单金额
-        - 订单总金额
+        - 订单金额合计
+        - 订单总价合计
+        - 订单记录总金额
+        - total order price
+        - sum of order totals
+        - total recorded order amount
+      business_definition: 对订单粒度事实 orderTotal 求和，反映当前分析范围内 o_totalprice 的合计值。该指标不应直接解释为真实业务 GMV；币种和实际业务口径需人工确认。
   filters:
     - name: fulfilled
       title: 已完成订单
-      description: Orders whose TPC-H status is F.
+      description: 仅包含订单状态代码为 F 的订单。
       expr: ${CUBE}.o_orderstatus = 'F'
       synonyms:
-        - completed orders
+        - 完成订单
+        - 状态为 F 的订单
+        - F 状态订单
         - fulfilled orders
-        - 已完成订单
+        - completed orders
+        - orders with status F
+      business_definition: 订单筛选条件，对应 o_orderstatus = 'F'，用于保留 TPC-H 状态代码为 F 的订单记录。
