@@ -1,6 +1,6 @@
 const { requestCompletion } = require("./llm");
 
-async function enrichDraftWithLlm(draft, context = {}) {
+async function enrichDraftWithLlm(draft, context = {}, options = {}) {
   const result = await requestCompletion(
     [
       {
@@ -22,7 +22,11 @@ async function enrichDraftWithLlm(draft, context = {}) {
         }),
       },
     ],
-    { maxTokens: 1800 },
+    {
+      maxTokens: Number(process.env.MODELER_AI_MAX_TOKENS || 1800),
+      timeoutMs: Number(process.env.MODELER_AI_TIMEOUT_MS || 90000),
+      ...options,
+    },
   );
   return applyEnrichment(draft, result);
 }

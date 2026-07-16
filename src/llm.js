@@ -84,7 +84,9 @@ async function requestCompletion(messages, options = {}) {
   const endpoint = baseUrl.endsWith("/v1")
     ? `${baseUrl}/chat/completions`
     : `${baseUrl}/v1/chat/completions`;
-  const timeout = Number(process.env.AI_REQUEST_TIMEOUT_MS || 30000);
+  const timeout = Number(
+    options.timeoutMs || process.env.AI_REQUEST_TIMEOUT_MS || 30000,
+  );
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {

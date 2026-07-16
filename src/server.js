@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const path = require("node:path");
+const crypto = require("node:crypto");
 const express = require("express");
 
 const { listQueries } = require("./catalog");
@@ -13,6 +14,7 @@ const {
 } = require("./databend-catalog");
 const { enrichDraftWithLlm } = require("./model-enricher");
 const { draftYaml, generateDrafts } = require("./model-generator");
+const { modelerLogPath, observeModelGeneration } = require("./modeler-log");
 const { createPlan } = require("./planner");
 const { observeQuery, queryLogPath } = require("./query-log");
 const { buildSemanticView } = require("./semantic-view");
@@ -59,6 +61,7 @@ app.get("/api/health", async (_req, res) => {
     aiEnabled: isEnabled(),
     aiModel: isEnabled() ? process.env.AI_MODEL : null,
     queryLogPath: queryLogPath(),
+    modelerLogPath: modelerLogPath(),
     semanticGateway: semanticGatewayMode(),
   });
 });
@@ -92,27 +95,73 @@ app.get(
 app.post(
   "/api/modeler/generate",
   asyncHandler(async (req, res) => {
+    const requestStartedAt = performance.now();
+    const requestId = crypto.randomUUID();
     const database = validateIdentifier(req.body?.database, "database");
     const tables = validateTableNames(req.body?.tables);
-    const metadata = await describeTables(database, tables);
-    let drafts = generateDrafts(metadata);
     const enrich = req.body?.enrichWithLlm === true;
-    if (enrich) {
-      if (!isEnabled())
-        return res.status(400).json({ error: "AI enrichment is disabled" });
-      drafts = await Promise.all(
-        drafts.map((draft) =>
-          enrichDraftWithLlm(draft, req.body?.businessContext || {}),
-        ),
-      );
+    const timings = {};
+    try {
+      const catalogStartedAt = performance.now();
+      const metadata = await describeTables(database, tables);
+      timings.catalogMs = elapsed(catalogStartedAt);
+      const generationStartedAt = performance.now();
+      let drafts = generateDrafts(metadata);
+      timings.generationMs = elapsed(generationStartedAt);
+      if (enrich) {
+        if (!isEnabled())
+          return res.status(400).json({ error: "AI enrichment is disabled" });
+        const llmStartedAt = performance.now();
+        drafts = await Promise.all(
+          drafts.map(async (draft) => {
+            try {
+              return await enrichDraftWithLlm(
+                draft,
+                req.body?.businessContext || {},
+              );
+            } catch (error) {
+              draft.diagnostics.llmFallback = true;
+              draft.diagnostics.llmWarnings = [
+                `LLM 增强失败，已保留规则草稿：${error.message}`,
+              ];
+              return draft;
+            }
+          }),
+        );
+        timings.llmMs = elapsed(llmStartedAt);
+      }
+      timings.totalMs = elapsed(requestStartedAt);
+      await observeModelGeneration({
+        requestId,
+        database,
+        tables,
+        enrichWithLlm: enrich,
+        timings,
+        drafts,
+      });
+      res.json({
+        requestId,
+        database,
+        generatedAt: new Date().toISOString(),
+        llmEnriched:
+          enrich && drafts.every((draft) => draft.diagnostics.llmEnriched),
+        llmFallback: drafts.some((draft) => draft.diagnostics.llmFallback),
+        reviewRequired: true,
+        timings,
+        drafts: drafts.map((draft) => ({ ...draft, yaml: draftYaml(draft) })),
+      });
+    } catch (error) {
+      timings.totalMs = elapsed(requestStartedAt);
+      await observeModelGeneration({
+        requestId,
+        database,
+        tables,
+        enrichWithLlm: enrich,
+        timings,
+        error,
+      });
+      throw error;
     }
-    res.json({
-      database,
-      generatedAt: new Date().toISOString(),
-      llmEnriched: enrich,
-      reviewRequired: true,
-      drafts: drafts.map((draft) => ({ ...draft, yaml: draftYaml(draft) })),
-    });
   }),
 );
 

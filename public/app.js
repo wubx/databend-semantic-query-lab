@@ -199,7 +199,7 @@ async function generateModelDrafts() {
         businessContext: { description: elements.businessContext.value },
       }),
     });
-    elements.generationStatus.textContent = `${response.drafts.length} 个草稿 · 必须人工确认`;
+    elements.generationStatus.textContent = `${response.drafts.length} 个草稿 · ${response.llmFallback ? "LLM 超时，已回退规则草稿" : response.llmEnriched ? "LLM 已增强" : "规则生成"} · ${formatTimings(response.timings)}`;
     elements.generatedDrafts.innerHTML = response.drafts
       .map(
         (draft) =>
@@ -634,6 +634,8 @@ function formatTimings(timings) {
     queryMs: "查询",
     summaryMs: "总结",
     totalMs: "总计",
+    catalogMs: "目录",
+    generationMs: "规则生成",
   };
   return Object.entries(timings)
     .filter(([key, value]) => labels[key] && Number.isFinite(value))
