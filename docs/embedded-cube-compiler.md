@@ -20,16 +20,27 @@ CUBE_REPOSITORY_PATH=/absolute/path/to/a/built/cube
 DATABEND_DSN=databend://readonly_user:password@host:8000/tpch_100?sslmode=disable
 ```
 
-The Cube checkout must contain built artifacts for:
+The Cube checkout currently should use
+[`wubx/cube`](https://github.com/wubx/cube), branch `feat/databend-driver`, and
+must contain built artifacts for:
 
 ```text
 packages/cubejs-schema-compiler/dist
 packages/cubejs-databend-driver/dist
 ```
 
-Build them from the Cube repository before starting the demo. The embedded mode
-uses Cube internal APIs, so `CUBE_REPOSITORY_PATH` must point to a compatible
-Cube revision. It strips Portable Manifest `meta` values before YAML compilation
+If that checkout is already built, point `CUBE_REPOSITORY_PATH` to it and skip
+cloning and rebuilding. Otherwise prepare it once:
+
+```bash
+git clone --branch feat/databend-driver https://github.com/wubx/cube.git
+cd cube
+yarn install
+yarn build
+```
+
+The embedded mode uses Cube internal APIs, so `CUBE_REPOSITORY_PATH` must point
+to a compatible Cube revision. It strips Portable Manifest `meta` values before
 because those AI-only objects contain arrays that the embedded native YAML
 expression compiler does not accept; the full metadata remains available in the
 LLM member catalog.
@@ -42,6 +53,12 @@ To keep the previous topology:
 SEMANTIC_GATEWAY=cube-server
 CUBE_API_URL=http://localhost:4000/cubejs-api/v1
 ```
+
+The standalone Cube Server currently should also be built from
+[`wubx/cube`](https://github.com/wubx/cube), branch `feat/databend-driver`.
+The branch contains the Databend Driver, dialect, and Server Core `databend`
+registration that may not yet be present in an upstream or published Cube
+release.
 
 The rest of the planner and UI use the same Semantic Gateway interface.
 

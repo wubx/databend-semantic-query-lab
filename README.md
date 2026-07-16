@@ -113,32 +113,39 @@ Browser → Demo Server :4100 → Cube Server :4000 → Databend
 - 可访问的 Databend
 - 已加载 TPC-H SF100 数据的 `tpch_100` 数据库
 - 一个只读 Databend 用户
-- Embedded 模式还需要一份兼容且已构建的 Cube 源码
+- Embedded 模式当前需要一份兼容且已经构建完成的 Cube 源码；推荐使用 [`wubx/cube`](https://github.com/wubx/cube) 的 `feat/databend-driver` 分支
 - LLM 是可选项；未配置 LLM 时认证查询和确定性路由仍可运行
 
 ## 快速开始：Embedded 模式
 
-### 1. 获取并构建 Cube
+### 1. 准备已构建的 Cube（Embedded 模式当前必需）
 
-如果本地还没有 Cube：
+当前 Embedded Gateway 直接加载 Cube Schema Compiler 和尚未发布到 npm 的 Databend SQL Dialect，因此需要一份包含 Databend Driver 且已经构建完成的 Cube 仓库。推荐使用：
 
-```bash
-git clone https://github.com/cube-js/cube.git
-cd cube
-yarn install
-yarn build
+```text
+Repository: https://github.com/wubx/cube
+Branch:     feat/databend-driver
 ```
 
-构建后至少应存在：
+如果本机已经有这份仓库，并且以下目录存在，可以跳过 clone、依赖安装和构建，直接在下一步配置 `CUBE_REPOSITORY_PATH`：
 
 ```text
 packages/cubejs-schema-compiler/dist
 packages/cubejs-databend-driver/dist
 ```
 
-`CUBE_REPOSITORY_PATH` 必须指向这份 Cube 仓库的绝对路径。
+首次准备时执行：
 
-> Embedded 模式调用 Cube 内部编译器 API，因此 Demo 与 Cube 源码版本需要兼容。当前开发环境使用的是包含 Databend Driver 的 Cube 仓库。
+```bash
+git clone --branch feat/databend-driver https://github.com/wubx/cube.git
+cd cube
+yarn install
+yarn build
+```
+
+`CUBE_REPOSITORY_PATH` 必须设置为该 Cube 仓库的绝对路径，而不是某个 `packages/` 子目录。
+
+> 这不是每次启动都要执行的步骤。只有首次准备、切换 Cube 版本、清理构建产物或修改 Schema Compiler / Databend Driver 后才需要重新构建。当前 Embedded 模式使用 Cube 内部编译器 API，因此 Demo 与 Cube 分支需要保持兼容。后续将 Schema Compiler 和 Databend Dialect 改为项目依赖后，可以移除此要求。
 
 ### 2. 安装 Demo 依赖
 
@@ -211,11 +218,29 @@ curl http://localhost:4100/api/health
 }
 ```
 
-如果 `cube.ok` 为 `false`，优先检查 `CUBE_REPOSITORY_PATH` 和 Cube 的 `dist` 构建产物；如果 `databend.ok` 为 `false`，检查 DSN、网络、TLS、用户权限和 `tpch_100` 数据库。
+如果 `cube.ok` 为 `false`，优先检查 `CUBE_REPOSITORY_PATH` 是否指向 [`wubx/cube`](https://github.com/wubx/cube) 的 `feat/databend-driver` 分支，以及该仓库是否存在所需的 `dist` 构建产物；如果 `databend.ok` 为 `false`，检查 DSN、网络、TLS、用户权限和 `tpch_100` 数据库。
 
 ## 使用 Cube Server 模式
 
-先启动一个能够连接 Databend 且已加载对应 Cube Model 的 Cube Server，然后修改 `.env`：
+是的，当前 Cube Server 也应使用 [`wubx/cube`](https://github.com/wubx/cube) 的 `feat/databend-driver` 分支。该分支包含：
+
+- `@cubejs-backend/databend-driver`；
+- `dbType: databend` 的 Server Core 注册；
+- Databend SQL Dialect；
+- Cube Server 连接 Databend 所需的 Driver 依赖配置。
+
+上游 Cube 或普通已发布版本在尚未包含这些改动时，不能直接作为本 Demo 的 Databend Cube Server。
+
+准备 Cube Server 源码：
+
+```bash
+git clone --branch feat/databend-driver https://github.com/wubx/cube.git
+cd cube
+yarn install
+yarn build
+```
+
+然后按照该分支的 Cube Server 配置启动一个能够连接 Databend 且已加载对应 Cube Model 的服务。Demo 侧修改 `.env`：
 
 ```env
 SEMANTIC_GATEWAY=cube-server
@@ -231,7 +256,7 @@ DATABEND_DSN=databend://readonly_user:password@databend-host:8000/tpch_100?sslmo
 npm start
 ```
 
-Cube Server 模式不使用 `CUBE_REPOSITORY_PATH`。详细边界见 [`docs/embedded-cube-compiler.md`](./docs/embedded-cube-compiler.md)。
+Cube Server 模式下，`CUBE_REPOSITORY_PATH` 不由 Demo 进程使用，但运行在 `:4000` 的独立 Cube Server 当前仍应从上述 `feat/databend-driver` 分支构建和启动。详细能力边界见 [`docs/embedded-cube-compiler.md`](./docs/embedded-cube-compiler.md)。
 
 ## 启用 LLM
 
