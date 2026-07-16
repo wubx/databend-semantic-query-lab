@@ -43,7 +43,7 @@ function buildReport(observations) {
 
 function executionGateway(item) {
   const source = item.result?.source || "";
-  return /Cube|semantic/i.test(source) ? "cube" : "databend-direct";
+  return /Cube|semantic|Embedded/i.test(source) ? "cube" : "databend-direct";
 }
 
 function percentiles(values) {

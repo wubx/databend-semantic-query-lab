@@ -33,7 +33,7 @@ language question, query plan, and real result rows.
 
 Requirements:
 
-- Cube running at `http://localhost:4000` with the Databend semantic model
+- Cube's built schema compiler and Databend dialect available through `CUBE_REPOSITORY_PATH` (embedded mode)
 - Databend available to the local machine
 - Node.js 20 or later
 
@@ -63,6 +63,7 @@ reference:
 
 - [Field-by-field explanation](./docs/snowflake-semantic-view-reference.md)
 - [Snowflake vs. Cube and combined semantic-layer design](./docs/snowflake-vs-cube-combined-semantic-layer.md)
+- [Embedded Cube compiler mode](./docs/embedded-cube-compiler.md)
 - [Query observability JSONL format](./docs/query-observability-log.md)
 - [Regression and Cube metadata validation](./docs/validation-and-regression.md)
 - [Original placeholder template](./references/snowflake-semantic-view.template.yaml)

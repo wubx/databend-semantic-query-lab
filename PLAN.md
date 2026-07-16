@@ -14,19 +14,20 @@ Natural language
        v
 Lightweight query router
        |
-       +-- Semantic mode --> Cube query --> Databend SQL --+
-       |                                                    |
-       +-- TPC-H mode ----> Certified SQL template ---------+
-                                                            |
-                                                            v
-                                                     SQL validation
-                                                            |
-                                                         EXPLAIN
-                                                            |
-                                                         Databend
-                                                            |
-                                             results / duration / query ID
+       +-- Semantic mode --> Embedded Cube compiler --> Databend SQL --+
+       |                                                              |
+       +-- TPC-H mode ----> Certified SQL template --------------------+
+                                                                      |
+                                                                      v
+                                                               SQL validation
+                                                                      |
+                                                                   Databend
+                                                                      |
+                                                       results / duration / query ID
 ```
+
+`SEMANTIC_GATEWAY=cube-server` keeps the previous Cube Server HTTP path when
+Cube runtime caching, pre-aggregations, or access policies are required.
 
 ## Scope
 

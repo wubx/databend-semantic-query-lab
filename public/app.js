@@ -36,7 +36,7 @@ async function loadHealth() {
   try {
     const health = await api("/api/health");
     elements.health.textContent = health.ok
-      ? `Cube 与 Databend 已连接${health.aiEnabled ? ` · AI ${health.aiModel}` : ""}`
+      ? `${health.semanticGateway === "embedded" ? "Embedded Cube Compiler" : "Cube"} 与 Databend 已连接${health.aiEnabled ? ` · AI ${health.aiModel}` : ""}`
       : "依赖服务异常";
     elements.health.className = `health ${health.ok ? "ok" : "bad"}`;
   } catch (error) {
@@ -108,7 +108,7 @@ function renderPlan(plan) {
     [
       "执行路径",
       plan.route === "semantic"
-        ? "Cube Semantic Query → Databend"
+        ? `${plan.semanticGateway === "embedded" ? "Embedded Cube Compiler" : "Cube Semantic Query"} → Databend`
         : "Certified SQL → Databend",
     ],
     ["查询参数", formatQueryParameters(plan)],

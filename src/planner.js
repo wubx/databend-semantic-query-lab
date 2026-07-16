@@ -1,7 +1,7 @@
 const { getQuery } = require("./catalog");
 const { isEnabled, planWithLlm } = require("./llm");
 const { deterministicPlan, exactCertifiedPlan } = require("./router");
-const { getCubeSql } = require("./cube");
+const { getSemanticGateway } = require("./semantic-gateway");
 const { validateSql } = require("./sql-safety");
 
 async function createPlan({ question, mode = "auto", planner = "auto" }) {
@@ -58,9 +58,10 @@ async function createPlan({ question, mode = "auto", planner = "auto" }) {
 
   const sqlStartedAt = performance.now();
   if (plan.route === "semantic") {
-    const generated = await getCubeSql(plan.cubeQuery);
+    const generated = await getSemanticGateway().compile(plan.cubeQuery);
     plan.sql = generated.sql;
     plan.sqlValues = generated.values;
+    plan.semanticGateway = generated.gateway;
   } else {
     plan.sql = getQuery(plan.queryId).buildSql(plan.parameters);
     plan.sqlValues = [];

@@ -40,6 +40,7 @@ function createObservation({ operation, request, plan, response, error }) {
     queryParameters: plan?.queryParameters,
     fallback: plan?.fallback,
     cubeQuery: plan?.cubeQuery,
+    semanticGateway: plan?.semanticGateway,
     sql: plan?.sql,
     sqlValues: plan?.sqlValues,
     validation: plan?.validation,

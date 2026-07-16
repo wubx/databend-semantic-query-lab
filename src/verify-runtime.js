@@ -1,5 +1,5 @@
 const { compileVerifiedQueries } = require("./compiler");
-const { executeCube, getCubeSql } = require("./cube");
+const { getSemanticGateway } = require("./semantic-gateway");
 const { loadManifest } = require("./manifest");
 const { validateSql } = require("./sql-safety");
 
@@ -11,12 +11,14 @@ async function verifyRuntime() {
   for (const definition of definitions) {
     const startedAt = performance.now();
     try {
-      const generated = await getCubeSql(definition.cubeQuery);
+      const generated = await getSemanticGateway().compile(
+        definition.cubeQuery,
+      );
       const validation = validateSql(generated.sql);
       if (!validation.valid)
         throw new Error(`unsafe SQL: ${validation.errors.join("; ")}`);
       const executionStartedAt = performance.now();
-      const response = await executeCube(definition.cubeQuery);
+      const response = await getSemanticGateway().execute(definition.cubeQuery);
       const rows = response.data || [];
       validateResult(definition, rows);
       results.push({

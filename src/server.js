@@ -4,11 +4,14 @@ const path = require("node:path");
 const express = require("express");
 
 const { listQueries } = require("./catalog");
-const { cubeHealth, executeCube } = require("./cube");
 const { explainDatabend, queryDatabend } = require("./databend");
 const { isEnabled, summarizeWithLlm } = require("./llm");
 const { createPlan } = require("./planner");
 const { observeQuery, queryLogPath } = require("./query-log");
+const {
+  getSemanticGateway,
+  semanticGatewayMode,
+} = require("./semantic-gateway");
 const { validateSql } = require("./sql-safety");
 
 const app = express();
@@ -24,7 +27,8 @@ app.get("/api/health", async (_req, res) => {
     databend: { ok: false },
   };
   await Promise.all([
-    cubeHealth()
+    getSemanticGateway()
+      .health()
       .then((value) => {
         checks.cube = value;
       })
@@ -46,6 +50,7 @@ app.get("/api/health", async (_req, res) => {
     aiEnabled: isEnabled(),
     aiModel: isEnabled() ? process.env.AI_MODEL : null,
     queryLogPath: queryLogPath(),
+    semanticGateway: semanticGatewayMode(),
   });
 });
 
@@ -130,13 +135,11 @@ app.post(
     let requestId;
     let source;
     if (plan.route === "semantic" && plan.cubeQuery) {
-      const result = await executeCube(plan.cubeQuery);
+      const result = await getSemanticGateway().execute(plan.cubeQuery);
       data = result.data;
       annotation = result.annotation;
       requestId = result.requestId;
-      source = plan.sqlValues.length
-        ? "Validated generated SQL via Cube parameter binding"
-        : "Validated semantic query via Cube";
+      source = result.source;
     } else {
       const rows = await queryDatabend(plan.sql);
       data = rows.slice(0, Number(process.env.RESULT_ROW_LIMIT || 500));
@@ -193,13 +196,13 @@ app.post(
 
     const startedAt = Date.now();
     if (plan.route === "semantic") {
-      const result = await executeCube(plan.cubeQuery);
+      const result = await getSemanticGateway().execute(plan.cubeQuery);
       const response = {
         plan,
         data: result.data,
         annotation: result.annotation,
         durationMs: Date.now() - startedAt,
-        source: "Cube semantic query",
+        source: result.source,
         requestId: result.requestId,
         timings: {
           planningMs: plan.timings?.totalMs,
