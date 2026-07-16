@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const path = require("node:path");
+const fs = require("node:fs");
 const express = require("express");
 
 const { listQueries } = require("./catalog");
@@ -14,6 +15,7 @@ const {
   semanticGatewayMode,
 } = require("./semantic-gateway");
 const { validateSql } = require("./sql-safety");
+const { DEFAULT_MANIFEST_PATH } = require("./manifest");
 
 const app = express();
 const port = Number(process.env.PORT || 4100);
@@ -60,6 +62,14 @@ app.get("/api/query/examples", (_req, res) =>
 );
 
 app.get("/api/semantic-model", (_req, res) => res.json(buildSemanticView()));
+
+app.get("/api/semantic-model/source", (_req, res) => {
+  const source = fs.readFileSync(
+    process.env.SEMANTIC_MANIFEST_PATH || DEFAULT_MANIFEST_PATH,
+    "utf8",
+  );
+  res.type("text/yaml").send(source);
+});
 
 app.post(
   "/api/query/plan",

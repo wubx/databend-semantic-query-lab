@@ -31,17 +31,29 @@ const elements = Object.fromEntries(
     "memberCount",
     "memberGrid",
     "verifiedQueryList",
+    "semanticCatalogView",
+    "semanticSourceView",
+    "semanticSource",
+    "sourceMeta",
+    "copySource",
+    "downloadSource",
   ].map((id) => [id, document.getElementById(id)]),
 );
 let currentPlan;
 let semanticModel;
 let selectedEntity = "all";
 let selectedKind = "all";
+let semanticSourceText = "";
 
 boot();
 
 async function boot() {
-  await Promise.all([loadHealth(), loadExamples(), loadSemanticModel()]);
+  await Promise.all([
+    loadHealth(),
+    loadExamples(),
+    loadSemanticModel(),
+    loadSemanticSource(),
+  ]);
   elements.plan.addEventListener("click", () => plan(false));
   elements.run.addEventListener("click", () => plan(true));
   elements.explain.addEventListener("click", explain);
@@ -62,10 +74,81 @@ async function boot() {
     renderMembers();
   });
   document
+    .querySelectorAll("[data-semantic-view]")
+    .forEach((tab) =>
+      tab.addEventListener("click", () =>
+        showSemanticView(tab.dataset.semanticView),
+      ),
+    );
+  elements.copySource.addEventListener("click", copySemanticSource);
+  elements.downloadSource.addEventListener("click", downloadSemanticSource);
+  document
     .querySelectorAll("[data-page]")
     .forEach((tab) =>
       tab.addEventListener("click", () => showPage(tab.dataset.page)),
     );
+}
+
+function showSemanticView(view) {
+  document
+    .querySelectorAll("[data-semantic-view]")
+    .forEach((tab) =>
+      tab.classList.toggle("active", tab.dataset.semanticView === view),
+    );
+  elements.semanticCatalogView.classList.toggle("active", view === "catalog");
+  elements.semanticSourceView.classList.toggle("active", view === "source");
+}
+
+async function loadSemanticSource() {
+  const response = await fetch("/api/semantic-model/source");
+  if (!response.ok) throw new Error(`Manifest source HTTP ${response.status}`);
+  semanticSourceText = await response.text();
+  elements.semanticSource.innerHTML = highlightYaml(semanticSourceText);
+  const lineCount = semanticSourceText.split("\n").length;
+  elements.sourceMeta.textContent = `${lineCount} 行 · ${formatBytes(new Blob([semanticSourceText]).size)}`;
+}
+
+async function copySemanticSource() {
+  await navigator.clipboard.writeText(semanticSourceText);
+  const previous = elements.copySource.textContent;
+  elements.copySource.textContent = "已复制";
+  setTimeout(() => {
+    elements.copySource.textContent = previous;
+  }, 1200);
+}
+
+function downloadSemanticSource() {
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(
+    new Blob([semanticSourceText], { type: "text/yaml" }),
+  );
+  link.download = "semantic-manifest.yaml";
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function highlightYaml(source) {
+  return source
+    .split("\n")
+    .map((line, index) => {
+      const escaped = escapeHtml(line);
+      const highlighted = escaped
+        .replace(/^(\s*)([\w.-]+)(:)/, '$1<span class="yaml-key">$2</span>$3')
+        .replace(
+          /(&quot;[^&]*?&quot;|&#39;[^&]*?&#39;)/g,
+          '<span class="yaml-string">$1</span>',
+        )
+        .replace(
+          /\b(true|false|null)\b/g,
+          '<span class="yaml-value">$1</span>',
+        );
+      return `<span class="source-line"><i>${index + 1}</i><span>${highlighted || " "}</span></span>`;
+    })
+    .join("\n");
+}
+
+function formatBytes(bytes) {
+  return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
 }
 
 function showPage(page) {

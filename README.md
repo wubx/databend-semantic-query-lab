@@ -76,6 +76,7 @@ reference:
 
 - [Field-by-field explanation](./docs/snowflake-semantic-view-reference.md)
 - [Snowflake vs. Cube and combined semantic-layer design](./docs/snowflake-vs-cube-combined-semantic-layer.md)
+- [Semantic Manifest maintenance design](./docs/semantic-manifest-maintenance.md)
 - [Embedded Cube compiler mode](./docs/embedded-cube-compiler.md)
 - [Query observability JSONL format](./docs/query-observability-log.md)
 - [Regression and Cube metadata validation](./docs/validation-and-regression.md)

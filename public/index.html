@@ -124,44 +124,76 @@
           <div id="semanticStats" class="semantic-stats"></div>
         </section>
 
-        <section class="semantic-layout">
-          <aside class="card semantic-sidebar">
-            <label class="search-label" for="semanticSearch"
-              >搜索语义成员</label
-            >
-            <input
-              id="semanticSearch"
-              class="semantic-search"
-              type="search"
-              placeholder="名称、说明、同义词…"
-            />
-            <div id="kindFilters" class="kind-filters"></div>
-            <div id="entityList" class="entity-list"></div>
-          </aside>
+        <div class="semantic-view-tabs">
+          <button class="semantic-view-tab active" data-semantic-view="catalog">
+            目录视图
+          </button>
+          <button class="semantic-view-tab" data-semantic-view="source">
+            原始 YAML
+          </button>
+        </div>
+        <div id="semanticCatalogView" class="semantic-subview active">
+          <section class="semantic-layout">
+            <aside class="card semantic-sidebar">
+              <label class="search-label" for="semanticSearch"
+                >搜索语义成员</label
+              >
+              <input
+                id="semanticSearch"
+                class="semantic-search"
+                type="search"
+                placeholder="名称、说明、同义词…"
+              />
+              <div id="kindFilters" class="kind-filters"></div>
+              <div id="entityList" class="entity-list"></div>
+            </aside>
 
-          <div class="semantic-main">
-            <section class="card relationship-card">
-              <div class="card-title">
-                <span>实体关系</span
-                ><span id="relationshipCount" class="badge subtle"></span>
+            <div class="semantic-main">
+              <section class="card relationship-card">
+                <div class="card-title">
+                  <span>实体关系</span
+                  ><span id="relationshipCount" class="badge subtle"></span>
+                </div>
+                <div id="relationshipGraph" class="relationship-graph"></div>
+              </section>
+              <section class="card">
+                <div class="card-title">
+                  <span id="entityHeading">语义成员</span
+                  ><span id="memberCount" class="badge subtle"></span>
+                </div>
+                <div id="memberGrid" class="member-grid"></div>
+              </section>
+              <section class="card verified-card">
+                <div class="card-title">
+                  <span>认证查询</span><span class="badge">可直接提问</span>
+                </div>
+                <div id="verifiedQueryList" class="verified-query-list"></div>
+              </section>
+            </div>
+          </section>
+        </div>
+        <div id="semanticSourceView" class="semantic-subview">
+          <section class="card source-card">
+            <div class="card-title">
+              <div>
+                <span>semantic/semantic-manifest.yaml</span>
+                <p>当前运行时权威语义源 · 只读</p>
               </div>
-              <div id="relationshipGraph" class="relationship-graph"></div>
-            </section>
-            <section class="card">
-              <div class="card-title">
-                <span id="entityHeading">语义成员</span
-                ><span id="memberCount" class="badge subtle"></span>
+              <div class="source-actions">
+                <span id="sourceMeta" class="badge subtle">尚未加载</span>
+                <button id="copySource" class="tiny">复制 YAML</button>
+                <button id="downloadSource" class="tiny primary">下载</button>
               </div>
-              <div id="memberGrid" class="member-grid"></div>
-            </section>
-            <section class="card verified-card">
-              <div class="card-title">
-                <span>认证查询</span><span class="badge">可直接提问</span>
-              </div>
-              <div id="verifiedQueryList" class="verified-query-list"></div>
-            </section>
-          </div>
-        </section>
+            </div>
+            <div class="source-legend">
+              <span>实体与成员</span><span>关系</span><span>认证查询</span
+              ><span>AI Policy</span>
+            </div>
+            <pre id="semanticSource" class="code semantic-source">
+正在加载原始 Manifest…</pre
+            >
+          </section>
+        </div>
       </div>
     </main>
     <script src="/app.js"></script>
