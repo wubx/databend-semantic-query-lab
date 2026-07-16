@@ -1,13 +1,21 @@
-const { getQuery: getSqlTemplateQuery, tpchQueries } = require('./sql-templates');
-const { compileVerifiedQueries } = require('./compiler');
-const { loadManifest } = require('./manifest');
+const {
+  getQuery: getSqlTemplateQuery,
+  tpchQueries,
+} = require("./sql-templates");
+const { compileVerifiedQueries } = require("./compiler");
+const { loadManifest } = require("./manifest");
 
-const semanticQueries = Object.fromEntries(
-  compileVerifiedQueries(loadManifest()).map((query) => [query.id, query]),
-);
+function currentSemanticQueries() {
+  return Object.fromEntries(
+    compileVerifiedQueries(loadManifest()).map((query) => [query.id, query]),
+  );
+}
 
 function listQueries() {
-  return [...Object.values(semanticQueries), ...Object.values(tpchQueries)].map((query) => ({
+  return [
+    ...Object.values(currentSemanticQueries()),
+    ...Object.values(tpchQueries),
+  ].map((query) => ({
     id: query.id,
     title: query.title,
     route: query.route,
@@ -19,7 +27,12 @@ function listQueries() {
 }
 
 function getQuery(id) {
-  return semanticQueries[id] || getSqlTemplateQuery(id);
+  return currentSemanticQueries()[id] || getSqlTemplateQuery(id);
 }
 
-module.exports = { getQuery, listQueries, semanticQueries, tpchQueries };
+module.exports = {
+  currentSemanticQueries,
+  getQuery,
+  listQueries,
+  tpchQueries,
+};

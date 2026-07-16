@@ -254,13 +254,21 @@ app.post(
     if (process.env.MODELER_PUBLISH_ENABLED !== "true")
       return res.status(403).json({ error: "模型发布未启用" });
     const prepared = prepareEntityPublication(req.body?.yaml);
+    const validation = await validateSemanticSource(
+      prepared.relativePath,
+      req.body?.yaml,
+    );
     const result = publishPreparedEntity(prepared);
+    const gateway = getSemanticGateway();
+    if (typeof gateway.reset === "function") gateway.reset(assembleManifest());
     res.json({
       ok: true,
       reviewRequired: false,
       ...result,
-      restartRequired: true,
-      message: "模型已发布并完成旧文件备份；服务将在重新编译时加载新模型。",
+      compiled: validation.compiled,
+      compilerReloaded: true,
+      restartRequired: false,
+      message: "模型已发布、备份并热重载，无需重启服务。",
     });
   }),
 );
