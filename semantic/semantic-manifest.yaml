@@ -320,6 +320,16 @@ verified_queries:
       limit: 100
     verified_by: demo-team
 
+  - id: S5
+    title: 延迟收货明细数量
+    question: 统计延迟收货的明细数量。
+    examples: [统计延迟收货的明细数量, 有多少延迟收货明细, 延迟交付明细数量]
+    route: semantic
+    cube_query:
+      measures: [LineItem.count]
+      segments: [LineItem.delayedReceipt]
+    verified_by: demo-team
+
 ai_policy:
   question_scope: Only answer questions supported by modeled TPC-H concepts or certified SQL templates.
   prefer_semantic_queries: true

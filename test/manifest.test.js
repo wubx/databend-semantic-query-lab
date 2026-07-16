@@ -43,7 +43,7 @@ test("compiles AI member catalog and verified queries", () => {
   );
   assert.deepEqual(
     artifacts.verifiedQueries.map((query) => query.id),
-    ["S1", "S2", "S3", "S4"],
+    ["S1", "S2", "S3", "S4", "S5"],
   );
 });
 

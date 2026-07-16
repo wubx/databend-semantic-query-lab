@@ -62,7 +62,7 @@ function compileCubeModel(manifest) {
           name: filter.name,
           title: filter.title,
           description: filter.description,
-          sql: filter.expr,
+          sql: filter.expr.replace(/\$\{CUBE\}/g, '{CUBE}'),
           meta: semanticMeta(filter),
         }),
       );
