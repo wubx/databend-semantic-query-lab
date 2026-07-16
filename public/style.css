@@ -317,8 +317,8 @@ td {
 }
 .generator-controls {
   display: grid;
-  grid-template-columns: 220px minmax(240px, 1fr) auto auto;
-  align-items: end;
+  grid-template-columns: 220px minmax(300px, 1fr) auto auto;
+  align-items: start;
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -327,16 +327,24 @@ td {
   font-size: 11px;
 }
 .generator-controls select,
-.generator-controls input[type="text"] {
+.generator-controls textarea {
   display: block;
   width: 100%;
-  height: 42px;
   margin-top: 6px;
-  padding: 0 11px;
+  padding: 10px 11px;
   color: #e4f0fa;
   background: #071522;
   border: 1px solid #29475f;
   border-radius: 9px;
+  font: 12px/1.5 inherit;
+}
+.generator-controls select {
+  height: 42px;
+  padding: 0 11px;
+}
+.context-field textarea {
+  min-height: 126px;
+  resize: vertical;
 }
 .ai-toggle {
   display: flex;
@@ -415,9 +423,8 @@ td {
 .draft-result > summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 9px;
-  padding: 12px;
+  padding: 10px 12px;
   cursor: pointer;
   list-style: none;
 }
@@ -433,19 +440,46 @@ td {
 .draft-result[open] > summary::before {
   transform: rotate(90deg);
 }
-.draft-result > summary > div {
+.draft-summary-name {
   display: flex;
   align-items: center;
   gap: 9px;
   min-width: 0;
 }
-.draft-result > summary code {
-  color: #59d9c1;
-}
-.draft-result > summary > span {
+.draft-summary-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-left: auto;
+}
+.draft-summary-actions > span {
   color: #7594aa;
   font-size: 10px;
+}
+.draft-summary-actions .tiny {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  padding: 5px 9px;
+}
+.draft-inline-status {
+  min-width: 48px;
+  color: #6f8da5;
+  font-size: 10px;
+  font-style: normal;
+  text-align: right;
+}
+.draft-inline-status.pending {
+  color: #e7c177;
+}
+.draft-inline-status.ok {
+  color: #58e1c6;
+}
+.draft-inline-status.bad {
+  color: #ff8da3;
+}
+.draft-result > summary code {
+  color: #59d9c1;
 }
 .draft-body {
   padding: 0 12px 12px;

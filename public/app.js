@@ -213,7 +213,7 @@ function renderGeneratedDraft(draft, open = false) {
     ...(draft.diagnostics.warnings || []),
     ...(draft.diagnostics.llmWarnings || []),
   ];
-  return `<details class="draft-result" data-draft="${escapeHtml(draft.entity.name)}"${open ? " open" : ""}><summary><div><strong>${escapeHtml(draft.entity.title)}</strong><code>${escapeHtml(draft.entity.name)}</code></div><span>${draft.diagnostics.llmEnriched ? "LLM 已增强" : draft.diagnostics.llmFallback ? "LLM 回退" : "规则生成"}</span></summary><div class="draft-body">${warnings.map((warning) => `<p class="draft-warning">${escapeHtml(warning)}</p>`).join("")}<textarea class="draft-editor" spellcheck="false">${escapeHtml(draft.yaml)}</textarea><div class="draft-validation" aria-live="polite">修改后请先校验。</div><div class="draft-actions"><button class="tiny" data-draft-action="copy">复制</button><button class="tiny secondary" data-draft-action="validate">校验</button><button class="tiny primary" data-draft-action="publish">发布</button></div></div></details>`;
+  return `<details class="draft-result" data-draft="${escapeHtml(draft.entity.name)}"${open ? " open" : ""}><summary><div class="draft-summary-name"><strong>${escapeHtml(draft.entity.title)}</strong><code>${escapeHtml(draft.entity.name)}</code></div><div class="draft-summary-actions"><span>${draft.diagnostics.llmEnriched ? "LLM 已增强" : draft.diagnostics.llmFallback ? "LLM 回退" : "规则生成"}</span><em class="draft-inline-status">待校验</em><button type="button" class="tiny secondary" data-draft-action="validate">校验</button><button type="button" class="tiny primary" data-draft-action="publish">发布</button></div></summary><div class="draft-body">${warnings.map((warning) => `<p class="draft-warning">${escapeHtml(warning)}</p>`).join("")}<textarea class="draft-editor" spellcheck="false">${escapeHtml(draft.yaml)}</textarea><div class="draft-validation" aria-live="polite">修改后请先校验。</div><div class="draft-actions"><button class="tiny" data-draft-action="copy">复制草稿</button></div></div></details>`;
 }
 
 async function handleDraftAction(event) {
@@ -223,12 +223,17 @@ async function handleDraftAction(event) {
   const editor = card.querySelector(".draft-editor");
   const status = card.querySelector(".draft-validation");
   const action = button.dataset.draftAction;
+  const inlineStatus = card.querySelector(".draft-inline-status");
   if (action === "copy") {
     await navigator.clipboard.writeText(editor.value);
     button.textContent = "已复制";
     return;
   }
+  event.preventDefault();
+  event.stopPropagation();
   button.disabled = true;
+  inlineStatus.className = "draft-inline-status pending";
+  inlineStatus.textContent = action === "publish" ? "发布中…" : "校验中…";
   status.className = "draft-validation pending";
   status.textContent = action === "publish" ? "校验并发布中…" : "校验中…";
   try {
@@ -239,6 +244,8 @@ async function handleDraftAction(event) {
       { method: "POST", body: JSON.stringify({ yaml: editor.value }) },
     );
     status.className = "draft-validation ok";
+    inlineStatus.className = "draft-inline-status ok";
+    inlineStatus.textContent = action === "publish" ? "已发布" : "校验通过";
     status.textContent =
       action === "publish"
         ? `发布成功：${result.target || result.relativePath}${result.backupPath ? ` · 备份 ${result.backupPath}` : " · 新建文件"}`
@@ -249,6 +256,8 @@ async function handleDraftAction(event) {
     }
   } catch (error) {
     status.className = "draft-validation bad";
+    inlineStatus.className = "draft-inline-status bad";
+    inlineStatus.textContent = action === "publish" ? "发布失败" : "校验失败";
     status.textContent = error.message;
   } finally {
     button.disabled = false;

@@ -2,6 +2,7 @@ node_modules/
 dist/
 generated/
 logs/
+semantic/backups/
 
 # Local configuration and secrets
 .env
