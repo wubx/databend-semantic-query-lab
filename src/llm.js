@@ -32,6 +32,7 @@ async function planWithLlm(question, mode = "auto") {
         "Use this priority: (1) select an exact certified query, (2) build a dynamic Cube Query from public semantic members, (3) reject.",
         "For TPC-H routes, only select a certified query ID. Never generate SQL.",
         "For dynamic semantic routes, queryId must be null and cubeQuery may contain only measures, dimensions, timeDimensions, filters, segments, order, and limit.",
+        "Efficiency/效率 questions may use governed efficiency members such as delayedCount, averageTransitDays, and averageDelayDays; never calculate unmodeled ratios.",
         "Use segments for semantic members whose kind is filter; for example LineItem.delayedReceipt must appear in segments, not filters.",
         "Use exact member identifiers from the supplied semanticMemberCatalog.",
         "Allowed granularities: year, quarter, month, week, day.",

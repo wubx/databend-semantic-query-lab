@@ -6,6 +6,9 @@
   "type": "commonjs",
   "scripts": {
     "build:semantic": "node src/build-manifest.js",
+    "report:queries": "node src/report-queries.js",
+    "validate:meta": "node src/validate-meta.js",
+    "verify:runtime": "node src/verify-runtime.js",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "node --test test/*.test.js"

@@ -91,6 +91,18 @@ function validateManifest(manifest) {
         `relationship ${relationship.name} has unsupported cardinality`,
       );
     }
+    for (const column of relationship.columns || []) {
+      const fromMembers = members.get(relationship.from);
+      const toMembers = members.get(relationship.to);
+      if (!memberUsesExpression(fromMembers, column.from))
+        errors.push(
+          `relationship ${relationship.name} references unknown source column ${column.from}`,
+        );
+      if (!memberUsesExpression(toMembers, column.to))
+        errors.push(
+          `relationship ${relationship.name} references unknown target column ${column.to}`,
+        );
+    }
   }
 
   const queryIds = new Set();
@@ -145,6 +157,12 @@ function validateMember(qualifiedName, expectedKind, members, errors, queryId) {
       `verified query ${queryId} uses ${qualifiedName} as ${expectedKind}, but it is ${member.kind}`,
     );
   }
+}
+
+function memberUsesExpression(entityMembers, expression) {
+  return [...(entityMembers?.values() || [])].some(
+    (member) => member.expr === expression,
+  );
 }
 
 function uniqueNames(items, label, errors) {

@@ -83,18 +83,22 @@ No customer demo is considered stable until this gate passes.
 
 ### Cube semantic model
 
-- [ ] Model `orders`
-- [ ] Model `customer`
-- [ ] Model `lineitem`
-- [ ] Model `nation` and `region`
-- [ ] Add tested joins between the models
-- [ ] Define titles and descriptions for exposed members
+- [x] Model `orders`
+- [x] Model `customer` and `supplier`
+- [x] Model `lineitem`
+- [x] Model `nation` and `region`
+- [x] Add tested joins between the models
+- [x] Define titles, descriptions, and synonyms for exposed members
 
 ### Certified semantic queries
 
 - [x] S1 — Total order count
 - [x] S2 — Order amount by order status
 - [x] S3 — Monthly order amount trend
+- [x] S4 — Yearly shipped quantity
+- [x] S5 — Delayed receipt line-item count
+- [x] S6 — Shipping-mode efficiency analysis
+- [x] S7 — Order amount by region
 
 ### Certified TPC-H queries
 
@@ -118,6 +122,7 @@ No customer demo is considered stable until this gate passes.
 - [x] `POST /api/query/plan`
 - [x] `POST /api/query/validate`
 - [x] `POST /api/query/execute`
+- [x] `POST /api/query/execute-sql` with Semantic parameter binding through Cube
 
 ### Query router
 
@@ -187,8 +192,10 @@ Prepare at least three paraphrases for each certified question.
 
 After the initial customer demo is stable:
 
-- [ ] Add Semantic S4 — Top customers by order amount
-- [ ] Add Semantic S5 — Order amount by region
+- [x] Add Semantic S4 — Yearly shipped quantity
+- [x] Add Semantic S5 — Delayed receipt count
+- [x] Add Semantic S6 — Shipping-mode efficiency
+- [x] Add Semantic S7 — Order amount by region
 - [ ] Add TPC-H Q5 — Local supplier volume
 - [ ] Add TPC-H Q17 — Small-quantity-order revenue
 - [ ] Add simple result charts
@@ -207,8 +214,10 @@ See [the combined design](./docs/snowflake-vs-cube-combined-semantic-layer.md).
 - [x] Compile verified semantic queries into the router catalog
 - [x] Validate dynamic Cube Query members, types, operators, enums, granularities, and limits
 - [x] Allow guarded LLM composition of dynamic Cube Query JSON
-- [ ] Compile verified queries into generated regression tests
-- [ ] Validate generated members against Cube `/meta`
+- [x] Validate generated members against Cube `/meta`
+- [x] Generate routing regression tests from every verified query and example
+- [x] Write JSONL observations with question, Cube Query, SQL, outcome, and stage timings
+- [x] Generate status, route, LLM usage, gateway, and latency reports from observations
 - [x] Keep Cube and provider-specific features in namespaced extensions
 
 ## Optional Milestone 6 — Controlled Free Text-to-SQL
@@ -231,6 +240,10 @@ This milestone is not required for the first customer demo.
 | S1  | 订单总数是多少？                             | Semantic       | Passed         |
 | S2  | 按订单状态统计订单金额。                     | Semantic       | Passed         |
 | S3  | 每月订单金额趋势是什么？                     | Semantic       | Implemented    |
+| S4  | 按年统计发货商品数量。                       | Semantic       | Passed         |
+| S5  | 统计延迟收货的明细数量。                     | Semantic       | Passed         |
+| S6  | 分析运输方式及效率。                         | Semantic       | Passed         |
+| S7  | 按区域统计订单金额。                         | Semantic       | Implemented    |
 | Q1  | 执行 TPC-H Q1 定价汇总报表。                 | TPC-H template | Implemented    |
 | Q6  | 执行 Q6，折扣在 5% 到 7% 之间，数量小于 24。 | TPC-H template | Passed         |
 | Q21 | 查询沙特阿拉伯导致已完成订单等待的供应商。   | TPC-H template | Implemented    |

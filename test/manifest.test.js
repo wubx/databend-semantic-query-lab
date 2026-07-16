@@ -34,7 +34,7 @@ test("compiles Cube YAML with semantic metadata", () => {
 
 test("compiles AI member catalog and verified queries", () => {
   const artifacts = compileManifest(loadManifest());
-  assert.equal(artifacts.memberCatalog.members.length, 32);
+  assert.equal(artifacts.memberCatalog.members.length, 57);
   assert.equal(
     artifacts.memberCatalog.members.find(
       (item) => item.member === "Orders.totalPrice",
@@ -43,7 +43,7 @@ test("compiles AI member catalog and verified queries", () => {
   );
   assert.deepEqual(
     artifacts.verifiedQueries.map((query) => query.id),
-    ["S1", "S2", "S3", "S4", "S5"],
+    ["S1", "S2", "S3", "S4", "S5", "S6", "S7"],
   );
 });
 

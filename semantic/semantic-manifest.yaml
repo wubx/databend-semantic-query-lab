@@ -92,8 +92,17 @@ entities:
     source:
       schema: tpch_100
       table: lineitem
+    keys:
+      primary: lineItemKey
 
     dimensions:
+      - name: lineItemKey
+        title: 订单明细唯一键
+        description: Composite TPC-H line-item key built from order number and line number.
+        expr: "CONCAT(CAST(l_orderkey AS STRING), '-', CAST(l_linenumber AS STRING))"
+        type: string
+        access: private
+
       - name: orderKey
         title: 订单编号
         description: Identifier of the order containing this line item.
@@ -257,6 +266,45 @@ entities:
         expr: discountRate
         synonyms: [average discount, avg discount, 平均折扣, 平均折扣率]
 
+      - name: delayedCount
+        title: 延迟收货明细数量
+        description: Number of line items received after their committed date.
+        type: count
+        expr: lineNumber
+        filters:
+          - sql: '"line_item".l_receiptdate > "line_item".l_commitdate'
+        synonyms: [delayed count, late receipt count, 延迟数量, 延迟明细数量]
+
+      - name: onTimeCount
+        title: 准时收货明细数量
+        description: Number of line items received by their committed date.
+        type: count
+        expr: lineNumber
+        filters:
+          - sql: '"line_item".l_receiptdate <= "line_item".l_commitdate'
+        synonyms:
+          [on-time count, punctual receipt count, 准时数量, 准时明细数量]
+
+      - name: averageTransitDays
+        title: 平均运输天数
+        description: Average calendar days from shipment to receipt; lower is better.
+        type: avg
+        expr: "DATEDIFF(DAY, l_shipdate, l_receiptdate)"
+        format: decimal
+        synonyms:
+          [average transit days, shipping duration, 平均运输时长, 平均运输天数]
+
+      - name: averageDelayDays
+        title: 平均延迟天数
+        description: Average days from committed date to receipt for delayed line items; lower is better.
+        type: avg
+        expr: "DATEDIFF(DAY, l_commitdate, l_receiptdate)"
+        filters:
+          - sql: '"line_item".l_receiptdate > "line_item".l_commitdate'
+        format: decimal
+        synonyms:
+          [average delay days, average lateness, 平均延迟天数, 平均逾期天数]
+
     filters:
       - name: delayedReceipt
         title: 延迟收货明细
@@ -268,6 +316,223 @@ entities:
       cube:
         refresh_key: false
 
+  - name: Customer
+    title: 客户
+    description: TPC-H customers who place orders.
+    source:
+      schema: tpch_100
+      table: customer
+    keys:
+      primary: customerKey
+    dimensions:
+      - name: customerKey
+        title: 客户编号
+        expr: c_custkey
+        type: number
+        synonyms: [customer id, 客户编号]
+      - name: name
+        title: 客户名称
+        expr: c_name
+        type: string
+        synonyms: [customer name, 客户名称]
+      - name: nationKey
+        title: 国家编号
+        expr: c_nationkey
+        type: number
+        synonyms: [nation id, country id, 国家编号]
+      - name: marketSegment
+        title: 市场细分
+        expr: c_mktsegment
+        type: string
+        synonyms: [market segment, 客户细分, 市场细分]
+    facts:
+      - name: accountBalance
+        title: 客户账户余额
+        expr: c_acctbal
+        type: decimal
+    metrics:
+      - name: count
+        title: 客户数量
+        description: Number of customers.
+        type: count
+        expr: customerKey
+        synonyms: [customer count, 客户数量]
+      - name: totalAccountBalance
+        title: 客户账户余额总计
+        description: Sum of customer account balances.
+        type: sum
+        expr: accountBalance
+        synonyms: [total account balance, 客户余额总计]
+    extensions:
+      cube:
+        refresh_key: false
+
+  - name: Supplier
+    title: 供应商
+    description: TPC-H suppliers that fulfill line items.
+    source:
+      schema: tpch_100
+      table: supplier
+    keys:
+      primary: supplierKey
+    dimensions:
+      - name: supplierKey
+        title: 供应商编号
+        expr: s_suppkey
+        type: number
+        synonyms: [supplier id, 供应商编号]
+      - name: name
+        title: 供应商名称
+        expr: s_name
+        type: string
+        synonyms: [supplier name, 供应商名称]
+      - name: nationKey
+        title: 国家编号
+        expr: s_nationkey
+        type: number
+        synonyms: [nation id, country id, 国家编号]
+    facts:
+      - name: accountBalance
+        title: 供应商账户余额
+        expr: s_acctbal
+        type: decimal
+    metrics:
+      - name: count
+        title: 供应商数量
+        description: Number of suppliers.
+        type: count
+        expr: supplierKey
+        synonyms: [supplier count, 供应商数量]
+      - name: totalAccountBalance
+        title: 供应商账户余额总计
+        description: Sum of supplier account balances.
+        type: sum
+        expr: accountBalance
+        synonyms: [supplier balance, 供应商余额总计]
+    extensions:
+      cube:
+        refresh_key: false
+
+  - name: Nation
+    title: 国家
+    description: TPC-H nations used by customers and suppliers.
+    source:
+      schema: tpch_100
+      table: nation
+    keys:
+      primary: nationKey
+    dimensions:
+      - name: nationKey
+        title: 国家编号
+        expr: n_nationkey
+        type: number
+        synonyms: [nation id, country id, 国家编号]
+      - name: name
+        title: 国家名称
+        expr: n_name
+        type: string
+        synonyms: [nation, country, 国家, 国家名称]
+      - name: regionKey
+        title: 区域编号
+        expr: n_regionkey
+        type: number
+        synonyms: [region id, 区域编号]
+    metrics:
+      - name: count
+        title: 国家数量
+        description: Number of nations.
+        type: count
+        expr: nationKey
+        synonyms: [nation count, 国家数量]
+    extensions:
+      cube:
+        refresh_key: false
+
+  - name: Region
+    title: 区域
+    description: TPC-H geographic sales regions.
+    source:
+      schema: tpch_100
+      table: region
+    keys:
+      primary: regionKey
+    dimensions:
+      - name: regionKey
+        title: 区域编号
+        expr: r_regionkey
+        type: number
+        synonyms: [region id, 区域编号]
+      - name: name
+        title: 区域名称
+        expr: r_name
+        type: string
+        synonyms: [region, region name, 区域, 区域名称]
+    metrics:
+      - name: count
+        title: 区域数量
+        description: Number of regions.
+        type: count
+        expr: regionKey
+        synonyms: [region count, 区域数量]
+    extensions:
+      cube:
+        refresh_key: false
+
+relationships:
+  - name: orders_customer
+    from: Orders
+    to: Customer
+    cardinality: many_to_one
+    sql: '"orders".o_custkey = "customer".c_custkey'
+    columns:
+      - from: o_custkey
+        to: c_custkey
+
+  - name: customer_nation
+    from: Customer
+    to: Nation
+    cardinality: many_to_one
+    sql: '"customer".c_nationkey = "nation".n_nationkey'
+    columns:
+      - from: c_nationkey
+        to: n_nationkey
+
+  - name: supplier_nation
+    from: Supplier
+    to: Nation
+    cardinality: many_to_one
+    sql: '"supplier".s_nationkey = "nation".n_nationkey'
+    columns:
+      - from: s_nationkey
+        to: n_nationkey
+
+  - name: nation_region
+    from: Nation
+    to: Region
+    cardinality: many_to_one
+    sql: '"nation".n_regionkey = "region".r_regionkey'
+    columns:
+      - from: n_regionkey
+        to: r_regionkey
+
+  - name: lineitem_orders
+    from: LineItem
+    to: Orders
+    cardinality: many_to_one
+    sql: '"line_item".l_orderkey = "orders".o_orderkey'
+    columns:
+      - from: l_orderkey
+        to: o_orderkey
+
+  - name: lineitem_supplier
+    from: LineItem
+    to: Supplier
+    cardinality: many_to_one
+    sql: '"line_item".l_suppkey = "supplier".s_suppkey'
+    columns:
+      - from: l_suppkey
+        to: s_suppkey
+
 verified_queries:
   - id: S1
     title: 订单总数
@@ -277,6 +542,11 @@ verified_queries:
     cube_query:
       measures: [Orders.count]
     verified_by: demo-team
+    expected_result:
+      columns: [Orders.count]
+      min_rows: 1
+    result:
+      summary_template: "订单总数为 {Orders.count}。"
 
   - id: S2
     title: 按状态统计订单金额
@@ -289,6 +559,9 @@ verified_queries:
       order:
         Orders.totalPrice: desc
     verified_by: demo-team
+    expected_result:
+      columns: [Orders.status, Orders.count, Orders.totalPrice]
+      min_rows: 1
 
   - id: S3
     title: 每月订单金额趋势
@@ -329,6 +602,48 @@ verified_queries:
       measures: [LineItem.count]
       segments: [LineItem.delayedReceipt]
     verified_by: demo-team
+    result:
+      summary_template: "延迟收货的明细数量为 {LineItem.count} 条。"
+
+  - id: S6
+    title: 运输方式效率分析
+    question: 分析运输方式及效率。
+    examples:
+      [
+        分析运输方式及效率,
+        各运输方式的运输效率,
+        比较不同运输方式的延迟率,
+        哪种运输方式效率最高,
+      ]
+    route: semantic
+    cube_query:
+      measures:
+        - LineItem.count
+        - LineItem.totalQuantity
+        - LineItem.delayedCount
+        - LineItem.averageTransitDays
+        - LineItem.averageDelayDays
+      dimensions: [LineItem.shipMode]
+      order:
+        LineItem.delayedCount: desc
+      limit: 100
+    verified_by: demo-team
+
+  - id: S7
+    title: 按区域统计订单金额
+    question: 按区域统计订单金额。
+    examples: [按区域统计订单金额, 各区域订单金额是多少, 区域销售额排名]
+    route: semantic
+    cube_query:
+      measures: [Orders.count, Orders.totalPrice]
+      dimensions: [Region.name]
+      order:
+        Orders.totalPrice: desc
+      limit: 100
+    verified_by: demo-team
+    expected_result:
+      columns: [Region.name, Orders.count, Orders.totalPrice]
+      min_rows: 1
 
 ai_policy:
   question_scope: Only answer questions supported by modeled TPC-H concepts or certified SQL templates.

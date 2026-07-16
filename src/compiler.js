@@ -49,11 +49,14 @@ function compileCubeModel(manifest) {
         description: metric.description,
         sql: fact?.expr || metric.expr,
         type: metric.type,
+        format: metric.format,
         public: metric.access !== "private",
+        filters: metric.filters?.map((filter) => ({
+          sql: filter.sql,
+        })),
         meta: semanticMeta(metric, { fact: fact?.name }),
       });
-      if (metric.type === "count" && metric.name === "count")
-        delete measure.sql;
+      if (metric.type === "count") delete measure.sql;
       return measure;
     });
     if (entity.filters?.length) {
@@ -62,7 +65,7 @@ function compileCubeModel(manifest) {
           name: filter.name,
           title: filter.title,
           description: filter.description,
-          sql: filter.expr.replace(/\$\{CUBE\}/g, '{CUBE}'),
+          sql: filter.expr.replace(/\$\{CUBE\}/g, "{CUBE}"),
           meta: semanticMeta(filter),
         }),
       );
@@ -167,7 +170,9 @@ function compileVerifiedQueries(manifest) {
     question: query.question,
     examples: query.examples || [],
     cubeQuery: query.cube_query,
+    expectedResult: query.expected_result,
     verifiedBy: query.verified_by,
+    summaryTemplate: query.result?.summary_template,
   }));
 }
 
