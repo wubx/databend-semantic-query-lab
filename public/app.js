@@ -96,6 +96,12 @@ function renderPlan(plan) {
         ? `${plan.planner}（AI 回退：${plan.fallback.reason}）`
         : plan.planner,
     ],
+    [
+      "查询理解",
+      plan.queryUnderstanding?.llmUsed
+        ? `使用 LLM（${plan.queryUnderstanding.method}）`
+        : `未使用 LLM（${plan.queryUnderstanding?.method || "deterministic"}）`,
+    ],
     ["置信度", `${Math.round(plan.confidence * 100)}%`],
     [
       "执行路径",
@@ -182,6 +188,7 @@ function formatTimings(timings) {
   if (!timings) return "未记录";
   const labels = {
     llmMs: "LLM",
+    exactMatchMs: "精确匹配",
     deterministicMs: "规则路由",
     fallbackMs: "回退",
     sqlGenerationMs: "Cube SQL",

@@ -1,6 +1,6 @@
 const { getQuery } = require("./catalog");
 const { isEnabled, planWithLlm } = require("./llm");
-const { deterministicPlan } = require("./router");
+const { deterministicPlan, exactCertifiedPlan } = require("./router");
 const { getCubeSql } = require("./cube");
 const { validateSql } = require("./sql-safety");
 
@@ -9,15 +9,30 @@ async function createPlan({ question, mode = "auto", planner = "auto" }) {
   const timings = {};
   let plan;
   const routingStartedAt = performance.now();
-  if (planner !== "deterministic" && isEnabled()) {
+  const exactStartedAt = performance.now();
+  const exactPlan =
+    planner === "auto" ? exactCertifiedPlan(question, mode) : null;
+  timings.exactMatchMs = elapsed(exactStartedAt);
+  if (exactPlan) {
+    plan = exactPlan;
+    plan.queryUnderstanding = {
+      llmUsed: false,
+      method: "certified-exact-match",
+    };
+  } else if (planner !== "deterministic" && isEnabled()) {
     const llmStartedAt = performance.now();
     try {
       plan = await planWithLlm(question, mode);
+      plan.queryUnderstanding = { llmUsed: true, method: "llm" };
     } catch (error) {
       timings.llmMs = elapsed(llmStartedAt);
       const fallbackStartedAt = performance.now();
       plan = deterministicPlan(question, mode);
       timings.fallbackMs = elapsed(fallbackStartedAt);
+      plan.queryUnderstanding = {
+        llmUsed: true,
+        method: "llm-with-deterministic-fallback",
+      };
       plan.fallback = {
         from: "llm",
         reason: error.message,
@@ -27,6 +42,10 @@ async function createPlan({ question, mode = "auto", planner = "auto" }) {
   } else {
     const deterministicStartedAt = performance.now();
     plan = deterministicPlan(question, mode);
+    plan.queryUnderstanding = {
+      llmUsed: false,
+      method: "deterministic",
+    };
     timings.deterministicMs = elapsed(deterministicStartedAt);
   }
   timings.routingMs = elapsed(routingStartedAt);
