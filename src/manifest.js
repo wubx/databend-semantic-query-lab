@@ -1,18 +1,19 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const YAML = require("yaml");
+const {
+  assembleManifest,
+  DEFAULT_MODEL_PATH,
+} = require("./semantic-assembler");
 
-const DEFAULT_MANIFEST_PATH = path.join(
-  __dirname,
-  "..",
-  "semantic",
-  "semantic-manifest.yaml",
-);
+const DEFAULT_MANIFEST_PATH = DEFAULT_MODEL_PATH;
 
 function loadManifest(
   filePath = process.env.SEMANTIC_MANIFEST_PATH || DEFAULT_MANIFEST_PATH,
 ) {
-  const document = YAML.parse(fs.readFileSync(filePath, "utf8"));
+  const document = filePath.endsWith("model.yaml")
+    ? assembleManifest(filePath)
+    : YAML.parse(fs.readFileSync(filePath, "utf8"));
   validateManifest(document);
   return document;
 }

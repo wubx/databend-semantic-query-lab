@@ -1,0 +1,38 @@
+entity:
+  name: Region
+  title: 区域
+  description: TPC-H geographic sales regions.
+  source:
+    schema: tpch_100
+    table: region
+  keys:
+    primary: regionKey
+  dimensions:
+    - name: regionKey
+      title: 区域编号
+      expr: r_regionkey
+      type: number
+      synonyms:
+        - region id
+        - 区域编号
+    - name: name
+      title: 区域名称
+      expr: r_name
+      type: string
+      synonyms:
+        - region
+        - region name
+        - 区域
+        - 区域名称
+  metrics:
+    - name: count
+      title: 区域数量
+      description: Number of regions.
+      type: count
+      expr: regionKey
+      synonyms:
+        - region count
+        - 区域数量
+  extensions:
+    cube:
+      refresh_key: false

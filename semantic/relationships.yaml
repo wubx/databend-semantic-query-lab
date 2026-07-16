@@ -1,0 +1,49 @@
+relationships:
+  - name: orders_customer
+    from: Orders
+    to: Customer
+    cardinality: many_to_one
+    sql: '"orders".o_custkey = "customer".c_custkey'
+    columns:
+      - from: o_custkey
+        to: c_custkey
+  - name: customer_nation
+    from: Customer
+    to: Nation
+    cardinality: many_to_one
+    sql: '"customer".c_nationkey = "nation".n_nationkey'
+    columns:
+      - from: c_nationkey
+        to: n_nationkey
+  - name: supplier_nation
+    from: Supplier
+    to: Nation
+    cardinality: many_to_one
+    sql: '"supplier".s_nationkey = "nation".n_nationkey'
+    columns:
+      - from: s_nationkey
+        to: n_nationkey
+  - name: nation_region
+    from: Nation
+    to: Region
+    cardinality: many_to_one
+    sql: '"nation".n_regionkey = "region".r_regionkey'
+    columns:
+      - from: n_regionkey
+        to: r_regionkey
+  - name: lineitem_orders
+    from: LineItem
+    to: Orders
+    cardinality: many_to_one
+    sql: '"line_item".l_orderkey = "orders".o_orderkey'
+    columns:
+      - from: l_orderkey
+        to: o_orderkey
+  - name: lineitem_supplier
+    from: LineItem
+    to: Supplier
+    cardinality: many_to_one
+    sql: '"line_item".l_suppkey = "supplier".s_suppkey'
+    columns:
+      - from: l_suppkey
+        to: s_suppkey

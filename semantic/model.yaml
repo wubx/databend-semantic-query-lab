@@ -1,0 +1,20 @@
+api_version: semantic.databend.dev/v1alpha1
+kind: SemanticManifest
+metadata:
+  name: tpch_order_analytics
+  description: Governed TPC-H order analytics for Cube, Databend, and AI query planning.
+  owner: demo-team
+  tags:
+    domain: sales
+    sensitivity: internal
+includes:
+  entities:
+    - entities/orders.yaml
+    - entities/line-item.yaml
+    - entities/customer.yaml
+    - entities/supplier.yaml
+    - entities/nation.yaml
+    - entities/region.yaml
+  relationships: relationships.yaml
+  verified_queries: verified-queries.yaml
+  policy: policy.yaml

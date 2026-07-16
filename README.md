@@ -63,11 +63,23 @@ Semantic Manifest as a business-facing catalog. It shows searchable entities,
 measures, dimensions, time dimensions, segments, Databend expressions,
 synonyms, enum values, privacy, relationships, and certified-query usage.
 
-The backing endpoint is:
+The backing endpoints are:
 
 ```text
-GET /api/semantic-model
+GET  /api/semantic-model
+GET  /api/semantic-model/source
+GET  /api/modeler/databases
+GET  /api/modeler/tables?database=...
+POST /api/modeler/generate
 ```
+
+The **生成模型** tab follows Cube Cloud's draft-and-review pattern: select a
+Databend database and tables, infer technical members and candidate metrics, and
+optionally ask the configured LLM to propose business titles, descriptions,
+business definitions, and synonyms. LLM enrichment is constrained from changing
+sources, expressions, types, aggregation, keys, or access. Every output remains
+`status: draft` and `requires_human_review: true`; it is never written into the
+active model automatically.
 
 ## Semantic model references
 
@@ -83,11 +95,13 @@ reference:
 - [Original placeholder template](./references/snowflake-semantic-view.template.yaml)
 - [TPC-H order analytics example](./references/snowflake-tpch-order-analytics.example.yaml)
 
-These files are documentation, not directly executable Cube models. The first
-portable implementation now lives at
-[`semantic/semantic-manifest.yaml`](./semantic/semantic-manifest.yaml). It is
-the source for generated Cube YAML, the LLM member catalog, and the verified
-semantic-query catalog:
+These files are documentation, not directly executable Cube models. The portable
+implementation now uses [`semantic/model.yaml`](./semantic/model.yaml) as its
+modular authoring entry point. Entities live under `semantic/entities/`, while
+relationships, verified queries, and policy are maintained in dedicated files.
+`npm run build:semantic` deterministically assembles them into one
+`generated/semantic-manifest.yaml` runtime contract, plus Cube YAML, the LLM
+member catalog, and the verified-query catalog:
 
 ```bash
 npm run build:semantic

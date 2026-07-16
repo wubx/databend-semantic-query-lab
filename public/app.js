@@ -37,6 +37,15 @@ const elements = Object.fromEntries(
     "sourceMeta",
     "copySource",
     "downloadSource",
+    "semanticGeneratorView",
+    "databaseSelect",
+    "businessContext",
+    "enrichWithLlm",
+    "generateModel",
+    "selectedTableCount",
+    "tableSelector",
+    "generationStatus",
+    "generatedDrafts",
   ].map((id) => [id, document.getElementById(id)]),
 );
 let currentPlan;
@@ -44,6 +53,7 @@ let semanticModel;
 let selectedEntity = "all";
 let selectedKind = "all";
 let semanticSourceText = "";
+let modelerDatabases = [];
 
 boot();
 
@@ -53,6 +63,7 @@ async function boot() {
     loadExamples(),
     loadSemanticModel(),
     loadSemanticSource(),
+    loadModelerDatabases(),
   ]);
   elements.plan.addEventListener("click", () => plan(false));
   elements.run.addEventListener("click", () => plan(true));
@@ -82,6 +93,17 @@ async function boot() {
     );
   elements.copySource.addEventListener("click", copySemanticSource);
   elements.downloadSource.addEventListener("click", downloadSemanticSource);
+  elements.databaseSelect.addEventListener("change", loadModelerTables);
+  elements.tableSelector.addEventListener("change", updateModelerSelection);
+  elements.generateModel.addEventListener("click", generateModelDrafts);
+  elements.generatedDrafts.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-copy-draft]");
+    if (!button) return;
+    await navigator.clipboard.writeText(
+      button.closest(".draft-result").querySelector("pre").textContent,
+    );
+    button.textContent = "已复制";
+  });
   document
     .querySelectorAll("[data-page]")
     .forEach((tab) =>
@@ -97,6 +119,99 @@ function showSemanticView(view) {
     );
   elements.semanticCatalogView.classList.toggle("active", view === "catalog");
   elements.semanticSourceView.classList.toggle("active", view === "source");
+  elements.semanticGeneratorView.classList.toggle(
+    "active",
+    view === "generate",
+  );
+}
+
+async function loadModelerDatabases() {
+  try {
+    const response = await api("/api/modeler/databases");
+    modelerDatabases = response.databases.filter((item) => item.name);
+    elements.databaseSelect.innerHTML =
+      '<option value="">选择数据库…</option>' +
+      modelerDatabases
+        .map(
+          (item) =>
+            `<option value="${escapeHtml(item.name)}">${escapeHtml(item.catalog)} · ${escapeHtml(item.name)}</option>`,
+        )
+        .join("");
+  } catch (error) {
+    elements.databaseSelect.innerHTML =
+      '<option value="">目录加载失败</option>';
+  }
+}
+
+async function loadModelerTables() {
+  const database = elements.databaseSelect.value;
+  elements.generateModel.disabled = true;
+  if (!database) return;
+  elements.tableSelector.innerHTML =
+    '<div class="empty">正在读取 Databend 表…</div>';
+  try {
+    const response = await api(
+      `/api/modeler/tables?database=${encodeURIComponent(database)}`,
+    );
+    elements.tableSelector.innerHTML = response.tables.length
+      ? response.tables
+          .map(
+            (table) =>
+              `<label class="table-choice"><input type="checkbox" value="${escapeHtml(table.name)}" /><span><strong>${escapeHtml(table.name)}</strong><small>${escapeHtml(table.type || "TABLE")}</small></span></label>`,
+          )
+          .join("")
+      : '<div class="empty">该数据库没有可建模的表。</div>';
+    updateModelerSelection();
+  } catch (error) {
+    elements.tableSelector.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function updateModelerSelection() {
+  const selected = [
+    ...elements.tableSelector.querySelectorAll(
+      'input[type="checkbox"]:checked',
+    ),
+  ];
+  elements.selectedTableCount.textContent = `${selected.length} 个已选择`;
+  elements.generateModel.disabled = !selected.length;
+}
+
+async function generateModelDrafts() {
+  const tables = [
+    ...elements.tableSelector.querySelectorAll(
+      'input[type="checkbox"]:checked',
+    ),
+  ].map((input) => input.value);
+  elements.generateModel.disabled = true;
+  elements.generationStatus.textContent = elements.enrichWithLlm.checked
+    ? "正在生成并由 LLM 增强…"
+    : "正在生成技术草稿…";
+  elements.generatedDrafts.innerHTML =
+    '<div class="empty">读取字段和推断语义成员中…</div>';
+  try {
+    const response = await api("/api/modeler/generate", {
+      method: "POST",
+      body: JSON.stringify({
+        database: elements.databaseSelect.value,
+        tables,
+        enrichWithLlm: elements.enrichWithLlm.checked,
+        businessContext: { description: elements.businessContext.value },
+      }),
+    });
+    elements.generationStatus.textContent = `${response.drafts.length} 个草稿 · 必须人工确认`;
+    elements.generatedDrafts.innerHTML = response.drafts
+      .map(
+        (draft) =>
+          `<article class="draft-result"><div><strong>${escapeHtml(draft.entity.title)}</strong><code>${escapeHtml(draft.entity.name)}</code><span>${draft.diagnostics.llmEnriched ? "LLM 已增强" : "规则生成"}</span></div>${(draft.diagnostics.warnings || []).map((warning) => `<p class="draft-warning">${escapeHtml(warning)}</p>`).join("")}<pre class="code">${escapeHtml(draft.yaml)}</pre><button class="tiny" data-copy-draft>复制草稿</button></article>`,
+      )
+      .join("");
+  } catch (error) {
+    elements.generationStatus.textContent = "生成失败";
+    elements.generatedDrafts.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+  } finally {
+    updateModelerSelection();
+  }
 }
 
 async function loadSemanticSource() {

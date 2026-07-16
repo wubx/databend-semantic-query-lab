@@ -1,0 +1,9 @@
+ai_policy:
+  question_scope: Only answer questions supported by modeled TPC-H concepts or certified SQL templates.
+  prefer_semantic_queries: true
+  allow_free_sql: false
+  reject_write_operations: true
+extensions:
+  cube:
+    refresh_key:
+      every: 1 hour

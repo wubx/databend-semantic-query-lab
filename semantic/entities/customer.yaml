@@ -1,0 +1,65 @@
+entity:
+  name: Customer
+  title: 客户
+  description: TPC-H customers who place orders.
+  source:
+    schema: tpch_100
+    table: customer
+  keys:
+    primary: customerKey
+  dimensions:
+    - name: customerKey
+      title: 客户编号
+      expr: c_custkey
+      type: number
+      synonyms:
+        - customer id
+        - 客户编号
+    - name: name
+      title: 客户名称
+      expr: c_name
+      type: string
+      synonyms:
+        - customer name
+        - 客户名称
+    - name: nationKey
+      title: 国家编号
+      expr: c_nationkey
+      type: number
+      synonyms:
+        - nation id
+        - country id
+        - 国家编号
+    - name: marketSegment
+      title: 市场细分
+      expr: c_mktsegment
+      type: string
+      synonyms:
+        - market segment
+        - 客户细分
+        - 市场细分
+  facts:
+    - name: accountBalance
+      title: 客户账户余额
+      expr: c_acctbal
+      type: decimal
+  metrics:
+    - name: count
+      title: 客户数量
+      description: Number of customers.
+      type: count
+      expr: customerKey
+      synonyms:
+        - customer count
+        - 客户数量
+    - name: totalAccountBalance
+      title: 客户账户余额总计
+      description: Sum of customer account balances.
+      type: sum
+      expr: accountBalance
+      synonyms:
+        - total account balance
+        - 客户余额总计
+  extensions:
+    cube:
+      refresh_key: false

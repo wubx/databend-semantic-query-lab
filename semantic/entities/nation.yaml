@@ -1,0 +1,46 @@
+entity:
+  name: Nation
+  title: 国家
+  description: TPC-H nations used by customers and suppliers.
+  source:
+    schema: tpch_100
+    table: nation
+  keys:
+    primary: nationKey
+  dimensions:
+    - name: nationKey
+      title: 国家编号
+      expr: n_nationkey
+      type: number
+      synonyms:
+        - nation id
+        - country id
+        - 国家编号
+    - name: name
+      title: 国家名称
+      expr: n_name
+      type: string
+      synonyms:
+        - nation
+        - country
+        - 国家
+        - 国家名称
+    - name: regionKey
+      title: 区域编号
+      expr: n_regionkey
+      type: number
+      synonyms:
+        - region id
+        - 区域编号
+  metrics:
+    - name: count
+      title: 国家数量
+      description: Number of nations.
+      type: count
+      expr: nationKey
+      synonyms:
+        - nation count
+        - 国家数量
+  extensions:
+    cube:
+      refresh_key: false

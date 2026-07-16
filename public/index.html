@@ -131,6 +131,9 @@
           <button class="semantic-view-tab" data-semantic-view="source">
             原始 YAML
           </button>
+          <button class="semantic-view-tab" data-semantic-view="generate">
+            生成模型
+          </button>
         </div>
         <div id="semanticCatalogView" class="semantic-subview active">
           <section class="semantic-layout">
@@ -192,6 +195,59 @@
             <pre id="semanticSource" class="code semantic-source">
 正在加载原始 Manifest…</pre
             >
+          </section>
+        </div>
+        <div id="semanticGeneratorView" class="semantic-subview">
+          <section class="card generator-card">
+            <div class="card-title">
+              <div>
+                <span>从 Databend 生成语义草稿</span>
+                <p>
+                  选择数据库和表，推断实体、成员与基础指标；生成结果不会自动发布。
+                </p>
+              </div>
+              <span class="badge">人工确认后发布</span>
+            </div>
+            <div class="generator-controls">
+              <label
+                >数据库<select id="databaseSelect">
+                  <option>正在加载…</option>
+                </select></label
+              >
+              <label class="context-field"
+                >业务上下文<input
+                  id="businessContext"
+                  type="text"
+                  placeholder="例如：TPC-H 订单和运输分析"
+              /></label>
+              <label class="ai-toggle"
+                ><input id="enrichWithLlm" type="checkbox" /> 使用 LLM
+                补充中文名称、说明和同义词</label
+              >
+              <button id="generateModel" class="primary" disabled>
+                生成草稿
+              </button>
+            </div>
+            <div class="modeler-body">
+              <div>
+                <div class="modeler-heading">
+                  <strong>选择表</strong
+                  ><span id="selectedTableCount">0 个已选择</span>
+                </div>
+                <div id="tableSelector" class="table-selector">
+                  <div class="empty">请选择数据库。</div>
+                </div>
+              </div>
+              <div>
+                <div class="modeler-heading">
+                  <strong>生成结果</strong
+                  ><span id="generationStatus">等待生成</span>
+                </div>
+                <div id="generatedDrafts" class="generated-drafts">
+                  <div class="empty">生成的 Draft YAML 将显示在这里。</div>
+                </div>
+              </div>
+            </div>
           </section>
         </div>
       </div>

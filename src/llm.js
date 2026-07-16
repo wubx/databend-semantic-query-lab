@@ -77,7 +77,7 @@ async function summarizeWithLlm({ question, plan, data }) {
   return typeof response.summary === "string" ? response.summary : null;
 }
 
-async function requestCompletion(messages) {
+async function requestCompletion(messages, options = {}) {
   const baseUrl = String(
     process.env.AI_BASE_URL || "https://api.openai.com/v1",
   ).replace(/\/$/, "");
@@ -95,7 +95,7 @@ async function requestCompletion(messages) {
       model: process.env.AI_MODEL || "gpt-4.1-mini",
       messages,
       temperature: 0,
-      max_tokens: 500,
+      max_tokens: options.maxTokens || 500,
       response_format: { type: "json_object" },
     }),
     dispatcher: proxyDispatcher(endpoint),
@@ -243,4 +243,10 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-module.exports = { isEnabled, planWithLlm, summarizeWithLlm, validateLlmPlan };
+module.exports = {
+  isEnabled,
+  planWithLlm,
+  requestCompletion,
+  summarizeWithLlm,
+  validateLlmPlan,
+};

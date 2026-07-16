@@ -1,12 +1,18 @@
 require("dotenv").config();
 
 const path = require("node:path");
-const fs = require("node:fs");
 const express = require("express");
 
 const { listQueries } = require("./catalog");
 const { explainDatabend, queryDatabend } = require("./databend");
 const { isEnabled, summarizeWithLlm } = require("./llm");
+const {
+  describeTables,
+  listDatabases,
+  listTables,
+} = require("./databend-catalog");
+const { enrichDraftWithLlm } = require("./model-enricher");
+const { draftYaml, generateDrafts } = require("./model-generator");
 const { createPlan } = require("./planner");
 const { observeQuery, queryLogPath } = require("./query-log");
 const { buildSemanticView } = require("./semantic-view");
@@ -15,7 +21,7 @@ const {
   semanticGatewayMode,
 } = require("./semantic-gateway");
 const { validateSql } = require("./sql-safety");
-const { DEFAULT_MANIFEST_PATH } = require("./manifest");
+const { assembleManifest, stringifyManifest } = require("./semantic-assembler");
 
 const app = express();
 const port = Number(process.env.PORT || 4100);
@@ -64,12 +70,51 @@ app.get("/api/query/examples", (_req, res) =>
 app.get("/api/semantic-model", (_req, res) => res.json(buildSemanticView()));
 
 app.get("/api/semantic-model/source", (_req, res) => {
-  const source = fs.readFileSync(
-    process.env.SEMANTIC_MANIFEST_PATH || DEFAULT_MANIFEST_PATH,
-    "utf8",
-  );
+  const source = stringifyManifest(assembleManifest());
   res.type("text/yaml").send(source);
 });
+
+app.get(
+  "/api/modeler/databases",
+  asyncHandler(async (_req, res) =>
+    res.json({ databases: await listDatabases() }),
+  ),
+);
+
+app.get(
+  "/api/modeler/tables",
+  asyncHandler(async (req, res) => {
+    const database = validateIdentifier(req.query.database, "database");
+    res.json({ database, tables: await listTables(database) });
+  }),
+);
+
+app.post(
+  "/api/modeler/generate",
+  asyncHandler(async (req, res) => {
+    const database = validateIdentifier(req.body?.database, "database");
+    const tables = validateTableNames(req.body?.tables);
+    const metadata = await describeTables(database, tables);
+    let drafts = generateDrafts(metadata);
+    const enrich = req.body?.enrichWithLlm === true;
+    if (enrich) {
+      if (!isEnabled())
+        return res.status(400).json({ error: "AI enrichment is disabled" });
+      drafts = await Promise.all(
+        drafts.map((draft) =>
+          enrichDraftWithLlm(draft, req.body?.businessContext || {}),
+        ),
+      );
+    }
+    res.json({
+      database,
+      generatedAt: new Date().toISOString(),
+      llmEnriched: enrich,
+      reviewRequired: true,
+      drafts: drafts.map((draft) => ({ ...draft, yaml: draftYaml(draft) })),
+    });
+  }),
+);
 
 app.post(
   "/api/query/plan",
@@ -287,6 +332,20 @@ app.listen(port, () => {
     `Databend Semantic SQL Demo is listening on http://localhost:${port}`,
   );
 });
+
+function validateIdentifier(value, label) {
+  if (!/^[A-Za-z_][A-Za-z0-9_$-]*$/.test(String(value || "")))
+    throw new Error(`Invalid ${label}`);
+  return String(value);
+}
+
+function validateTableNames(values) {
+  if (!Array.isArray(values) || !values.length || values.length > 20)
+    throw new Error("Select between 1 and 20 tables");
+  return [
+    ...new Set(values.map((value) => validateIdentifier(value, "table"))),
+  ];
+}
 
 function asyncHandler(handler) {
   return (req, res, next) =>

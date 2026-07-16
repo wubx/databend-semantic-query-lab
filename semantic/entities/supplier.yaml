@@ -1,0 +1,57 @@
+entity:
+  name: Supplier
+  title: 供应商
+  description: TPC-H suppliers that fulfill line items.
+  source:
+    schema: tpch_100
+    table: supplier
+  keys:
+    primary: supplierKey
+  dimensions:
+    - name: supplierKey
+      title: 供应商编号
+      expr: s_suppkey
+      type: number
+      synonyms:
+        - supplier id
+        - 供应商编号
+    - name: name
+      title: 供应商名称
+      expr: s_name
+      type: string
+      synonyms:
+        - supplier name
+        - 供应商名称
+    - name: nationKey
+      title: 国家编号
+      expr: s_nationkey
+      type: number
+      synonyms:
+        - nation id
+        - country id
+        - 国家编号
+  facts:
+    - name: accountBalance
+      title: 供应商账户余额
+      expr: s_acctbal
+      type: decimal
+  metrics:
+    - name: count
+      title: 供应商数量
+      description: Number of suppliers.
+      type: count
+      expr: supplierKey
+      synonyms:
+        - supplier count
+        - 供应商数量
+    - name: totalAccountBalance
+      title: 供应商账户余额总计
+      description: Sum of supplier account balances.
+      type: sum
+      expr: accountBalance
+      synonyms:
+        - supplier balance
+        - 供应商余额总计
+  extensions:
+    cube:
+      refresh_key: false

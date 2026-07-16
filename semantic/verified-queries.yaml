@@ -1,0 +1,140 @@
+verified_queries:
+  - id: S1
+    title: 订单总数
+    question: 订单总数是多少？
+    examples:
+      - 订单总数是多少
+      - 一共有多少订单
+      - 统计订单数量
+    route: semantic
+    cube_query:
+      measures:
+        - Orders.count
+    verified_by: demo-team
+    expected_result:
+      columns:
+        - Orders.count
+      min_rows: 1
+    result:
+      summary_template: 订单总数为 {Orders.count}。
+  - id: S2
+    title: 按状态统计订单金额
+    question: 按订单状态统计订单金额。
+    examples:
+      - 按订单状态统计订单金额
+      - 各状态订单金额是多少
+      - 订单金额按状态分组
+    route: semantic
+    cube_query:
+      measures:
+        - Orders.count
+        - Orders.totalPrice
+      dimensions:
+        - Orders.status
+      order:
+        Orders.totalPrice: desc
+    verified_by: demo-team
+    expected_result:
+      columns:
+        - Orders.status
+        - Orders.count
+        - Orders.totalPrice
+      min_rows: 1
+  - id: S3
+    title: 每月订单金额趋势
+    question: 每月订单金额趋势是什么？
+    examples:
+      - 每月订单金额趋势
+      - 按月统计订单金额
+      - 订单金额月度变化
+    route: semantic
+    cube_query:
+      measures:
+        - Orders.totalPrice
+      timeDimensions:
+        - dimension: Orders.orderDate
+          granularity: month
+      order:
+        Orders.orderDate: asc
+      limit: 120
+    verified_by: demo-team
+  - id: S4
+    title: 按年统计发货商品数量
+    question: 按年统计发货商品数量。
+    examples:
+      - 按年统计发货商品数量
+      - 每年发货多少商品
+      - 发货数量年度趋势
+    route: semantic
+    cube_query:
+      measures:
+        - LineItem.totalQuantity
+      timeDimensions:
+        - dimension: LineItem.shipDate
+          granularity: year
+      order:
+        LineItem.shipDate: asc
+      limit: 100
+    verified_by: demo-team
+  - id: S5
+    title: 延迟收货明细数量
+    question: 统计延迟收货的明细数量。
+    examples:
+      - 统计延迟收货的明细数量
+      - 有多少延迟收货明细
+      - 延迟交付明细数量
+    route: semantic
+    cube_query:
+      measures:
+        - LineItem.count
+      segments:
+        - LineItem.delayedReceipt
+    verified_by: demo-team
+    result:
+      summary_template: 延迟收货的明细数量为 {LineItem.count} 条。
+  - id: S6
+    title: 运输方式效率分析
+    question: 分析运输方式及效率。
+    examples:
+      - 分析运输方式及效率
+      - 各运输方式的运输效率
+      - 比较不同运输方式的延迟率
+      - 哪种运输方式效率最高
+    route: semantic
+    cube_query:
+      measures:
+        - LineItem.count
+        - LineItem.totalQuantity
+        - LineItem.delayedCount
+        - LineItem.averageTransitDays
+        - LineItem.averageDelayDays
+      dimensions:
+        - LineItem.shipMode
+      order:
+        LineItem.delayedCount: desc
+      limit: 100
+    verified_by: demo-team
+  - id: S7
+    title: 按区域统计订单金额
+    question: 按区域统计订单金额。
+    examples:
+      - 按区域统计订单金额
+      - 各区域订单金额是多少
+      - 区域销售额排名
+    route: semantic
+    cube_query:
+      measures:
+        - Orders.count
+        - Orders.totalPrice
+      dimensions:
+        - Region.name
+      order:
+        Orders.totalPrice: desc
+      limit: 100
+    verified_by: demo-team
+    expected_result:
+      columns:
+        - Region.name
+        - Orders.count
+        - Orders.totalPrice
+      min_rows: 1
