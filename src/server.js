@@ -13,10 +13,15 @@ const {
   listTables,
 } = require("./databend-catalog");
 const { enrichDraftWithLlm } = require("./model-enricher");
-const { draftYaml, generateDrafts } = require("./model-generator");
+const {
+  alignDraftsWithExistingModel,
+  draftYaml,
+  generateDrafts,
+} = require("./model-generator");
 const {
   prepareEntityPublication,
   publishPreparedEntity,
+  assertCompatibleReplacement,
 } = require("./model-publisher");
 const { modelerLogPath, observeModelGeneration } = require("./modeler-log");
 const { createPlan } = require("./planner");
@@ -110,7 +115,10 @@ app.post(
       const metadata = await describeTables(database, tables);
       timings.catalogMs = elapsed(catalogStartedAt);
       const generationStartedAt = performance.now();
-      let drafts = generateDrafts(metadata);
+      let drafts = alignDraftsWithExistingModel(
+        generateDrafts(metadata),
+        assembleManifest(),
+      );
       timings.generationMs = elapsed(generationStartedAt);
       if (enrich) {
         if (!isEnabled())
@@ -173,6 +181,7 @@ app.post(
   "/api/modeler/validate-draft",
   asyncHandler(async (req, res) => {
     const prepared = prepareEntityPublication(req.body?.yaml);
+    assertCompatibleReplacement(prepared);
     res.json({
       valid: true,
       entity: prepared.entity.name,

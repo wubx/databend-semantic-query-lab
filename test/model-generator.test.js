@@ -1,7 +1,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { generateEntityDraft } = require("../src/model-generator");
+const {
+  alignDraftsWithExistingModel,
+  generateEntityDraft,
+} = require("../src/model-generator");
 const { applyEnrichment } = require("../src/model-enricher");
 
 const table = {
@@ -29,6 +32,24 @@ test("generates a review-only semantic entity draft from Databend metadata", () 
   assert.ok(
     draft.entity.metrics.some((member) => member.name === "totalTotalprice"),
   );
+});
+
+test("reuses an existing stable entity when a selected table is already modeled", () => {
+  const generated = generateEntityDraft(table);
+  const [aligned] = alignDraftsWithExistingModel([generated], {
+    entities: [
+      {
+        name: "Orders",
+        title: "订单",
+        source: { schema: "sales", table: "orders" },
+        dimensions: [{ name: "orderKey", expr: "o_orderkey", type: "number" }],
+        metrics: [{ name: "count", expr: "orderKey", type: "count" }],
+      },
+    ],
+  });
+  assert.equal(aligned.entity.name, "Orders");
+  assert.equal(aligned.entity.dimensions[0].name, "orderKey");
+  assert.equal(aligned.diagnostics.existingModel, true);
 });
 
 test("LLM enrichment cannot alter technical model fields", () => {

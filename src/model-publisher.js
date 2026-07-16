@@ -121,7 +121,7 @@ function sameSource(left = {}, right = {}) {
     right.table &&
     left.table === right.table &&
     left.schema === right.schema &&
-    (left.catalog || "") === (right.catalog || "")
+    (!left.catalog || !right.catalog || left.catalog === right.catalog)
   );
 }
 
@@ -139,6 +139,7 @@ function writeAtomic(filePath, content) {
 
 module.exports = {
   BACKUP_ROOT,
+  assertCompatibleReplacement,
   parseEntityYaml,
   prepareEntityPublication,
   publishPreparedEntity,

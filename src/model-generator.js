@@ -83,6 +83,39 @@ function generateDrafts(tables) {
   return tables.map(generateEntityDraft);
 }
 
+function alignDraftsWithExistingModel(drafts, manifest) {
+  return drafts.map((draft) => {
+    const existing = (manifest.entities || []).find((entity) =>
+      sameSource(entity.source, draft.entity.source),
+    );
+    if (!existing) return draft;
+    return {
+      ...draft,
+      entity: structuredClone(existing),
+      diagnostics: {
+        ...draft.diagnostics,
+        generatedEntityName: draft.entity.name,
+        existingEntityName: existing.name,
+        existingModel: true,
+        warnings: [
+          ...(draft.diagnostics.warnings || []),
+          `表已由 ${existing.name} 建模；草稿已保留现有稳定成员和认证查询兼容性。`,
+        ],
+      },
+    };
+  });
+}
+
+function sameSource(left = {}, right = {}) {
+  return (
+    left.table &&
+    right.table &&
+    left.table === right.table &&
+    left.schema === right.schema &&
+    (!left.catalog || !right.catalog || left.catalog === right.catalog)
+  );
+}
+
 function draftYaml(draft) {
   return YAML.stringify({ entity: draft.entity }, { lineWidth: 120 });
 }
@@ -158,6 +191,7 @@ function compact(value) {
 }
 
 module.exports = {
+  alignDraftsWithExistingModel,
   classifyColumn,
   draftYaml,
   generateDrafts,
