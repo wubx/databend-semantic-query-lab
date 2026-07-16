@@ -170,6 +170,8 @@ async function executePlannedSql() {
           planner: currentPlan.planner,
           strategy: currentPlan.strategy,
           cubeQuery: currentPlan.cubeQuery,
+          confidence: currentPlan.confidence,
+          queryParameters: currentPlan.queryParameters,
           queryUnderstanding: currentPlan.queryUnderstanding,
           timings: currentPlan.timings,
         },

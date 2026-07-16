@@ -112,8 +112,8 @@ app.post(
       res.locals.queryObservation.logged = true;
       return res.status(400).json(validation);
     }
-    if (plan.sqlValues.length) {
-      const error = new Error("带绑定参数的 SQL 暂不允许直接执行");
+    if (plan.sqlValues.length && plan.route !== "semantic") {
+      const error = new Error("只有 Semantic 路径支持通过 Cube 绑定 SQL 参数");
       await observeQuery({
         operation: "execute-sql",
         request: req.body,
@@ -125,16 +125,35 @@ app.post(
     }
 
     const queryStartedAt = performance.now();
-    const rows = await queryDatabend(plan.sql);
+    let data;
+    let annotation;
+    let requestId;
+    let source;
+    if (plan.route === "semantic" && plan.cubeQuery) {
+      const result = await executeCube(plan.cubeQuery);
+      data = result.data;
+      annotation = result.annotation;
+      requestId = result.requestId;
+      source = plan.sqlValues.length
+        ? "Validated generated SQL via Cube parameter binding"
+        : "Validated semantic query via Cube";
+    } else {
+      const rows = await queryDatabend(plan.sql);
+      data = rows.slice(0, Number(process.env.RESULT_ROW_LIMIT || 500));
+      source = "Validated generated SQL";
+    }
+    const queryMs = elapsed(queryStartedAt);
     const response = {
       plan,
-      data: rows.slice(0, Number(process.env.RESULT_ROW_LIMIT || 500)),
-      durationMs: elapsed(queryStartedAt),
-      source: "Validated generated SQL",
+      data,
+      annotation,
+      requestId,
+      durationMs: queryMs,
+      source,
       timings: {
         planningMs: suppliedPlan.timings?.totalMs,
         validationMs,
-        queryMs: elapsed(queryStartedAt),
+        queryMs,
       },
     };
     response.summary = await timedSummary(req.body?.question, plan, response);

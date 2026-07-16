@@ -34,6 +34,13 @@ The log can contain user questions, generated SQL, filter values, and summaries.
 Treat it as potentially sensitive operational data. Do not record credentials or
 security tokens, and apply access control and retention rules in production.
 
+The SQL-card execution button revalidates the displayed SQL. For Semantic plans,
+it executes the retained, validated Cube Query through Cube `/load`; this lets
+Cube preserve and bind `sqlValues` safely. For non-Semantic SQL without bind
+values, the displayed SQL is executed directly against Databend. Parameterized
+non-Semantic SQL remains rejected until the Databend execution adapter supports
+native bind parameters.
+
 ## Final record format
 
 A successful `execute` record has this shape:
