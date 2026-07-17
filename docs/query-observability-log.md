@@ -150,7 +150,11 @@ The file itself contains compact records, one per physical line:
 | `route`                      | Selected `semantic` or `tpch` execution route.                                               |
 | `queryId`                    | Certified query ID such as `S5`, or `DYNAMIC`.                                               |
 | `strategy`                   | `certified` or `dynamic` for an LLM plan.                                                    |
-| `planner`                    | Planner that produced the plan: `llm` or `deterministic`.                                    |
+| `planner`                    | Planner that produced the plan: `llm`, `deterministic`, or `user-supplied-sql`.              |
+| `sqlOrigin`                  | `cube-generated`, `certified-sql`, or `free-sql`.                                            |
+| `policy.allowFreeSql`        | Runtime value of `ai_policy.allow_free_sql`.                                                 |
+| `policy.usedAllowFreeSql`    | `true` only when execution depends on the free-SQL policy.                                   |
+| `policy.decision`            | `allowed`, `denied`, or `not-applicable`.                                                    |
 | `confidence`                 | Query-understanding confidence from 0 to 1; shown as 可信度 in UI.                           |
 | `queryUnderstanding.llmUsed` | Whether an LLM participated in understanding this question.                                  |
 | `queryUnderstanding.method`  | Exact match, LLM, deterministic, or LLM fallback method.                                     |
@@ -181,6 +185,44 @@ The file itself contains compact records, one per physical line:
 Fields that do not apply to an operation are omitted instead of being emitted as
 `null`. In particular, a `plan` record does not have execution, summary, or
 result fields.
+
+## Tracking `allow_free_sql`
+
+A request is counted as using `allow_free_sql` only when SQL is submitted without a server-generated Semantic or Certified SQL plan. Such records contain:
+
+```json
+{
+  "operation": "execute-sql",
+  "question": "查看金额最高的十笔订单",
+  "route": "free-sql",
+  "queryId": "FREE_SQL",
+  "strategy": "free-sql",
+  "planner": "user-supplied-sql",
+  "sqlOrigin": "free-sql",
+  "policy": {
+    "allowFreeSql": true,
+    "usedAllowFreeSql": true,
+    "decision": "allowed"
+  },
+  "sql": "SELECT * FROM tpch_100.orders ORDER BY o_totalprice DESC LIMIT 10"
+}
+```
+
+Cube-generated and Certified SQL executions are not counted as free SQL and use `decision: not-applicable`. When the policy is disabled, attempted free SQL is rejected and still logged with `decision: denied`, preserving the original question and submitted SQL for follow-up.
+
+Filter allowed free-SQL activity:
+
+```bash
+jq -c 'select(.policy.usedAllowFreeSql == true and .policy.decision == "allowed") | {timestamp, question, sql, status}' \
+  logs/query-observability.jsonl
+```
+
+Filter denied attempts:
+
+```bash
+jq -c 'select(.policy.usedAllowFreeSql == true and .policy.decision == "denied") | {timestamp, question, sql, error}' \
+  logs/query-observability.jsonl
+```
 
 ## Rejected and failed requests
 

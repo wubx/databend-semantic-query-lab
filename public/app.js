@@ -1044,6 +1044,7 @@ async function executePlannedSql() {
           route: currentPlan.route,
           planner: currentPlan.planner,
           strategy: currentPlan.strategy,
+          sqlOrigin: currentPlan.sqlOrigin,
           cubeQuery: currentPlan.cubeQuery,
           confidence: currentPlan.confidence,
           queryParameters: currentPlan.queryParameters,

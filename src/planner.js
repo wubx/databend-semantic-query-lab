@@ -61,10 +61,12 @@ async function createPlan({ question, mode = "auto", planner = "auto" }) {
     const generated = await getSemanticGateway().compile(plan.cubeQuery);
     plan.sql = generated.sql;
     plan.sqlValues = generated.values;
+    plan.sqlOrigin = "cube-generated";
     plan.semanticGateway = generated.gateway;
   } else {
     plan.sql = getQuery(plan.queryId).buildSql(plan.parameters);
     plan.sqlValues = [];
+    plan.sqlOrigin = "certified-sql";
   }
   timings.sqlGenerationMs = elapsed(sqlStartedAt);
 

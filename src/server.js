@@ -11,7 +11,7 @@ const {
   publishCertifiedSqlAsset,
   validateCertifiedSqlAsset,
 } = require("./certified-sql");
-const { listQueries } = require("./catalog");
+const { getQuery, listQueries } = require("./catalog");
 const { explainDatabend, queryDatabend } = require("./databend");
 const { isEnabled, summarizeWithLlm } = require("./llm");
 const {
@@ -32,6 +32,7 @@ const {
 } = require("./model-publisher");
 const { modelerLogPath, observeModelGeneration } = require("./modeler-log");
 const { createPlan } = require("./planner");
+const { loadManifest } = require("./manifest");
 const { observeQuery, queryLogPath } = require("./query-log");
 const { buildSemanticView } = require("./semantic-view");
 const {
@@ -369,9 +370,30 @@ app.post(
     const validation = validateSql(req.body?.sql);
     const validationMs = elapsed(validationStartedAt);
     const suppliedPlan = req.body?.plan || {};
+    const sqlOrigin = classifySqlOrigin(
+      suppliedPlan,
+      validation.sql || req.body?.sql,
+    );
+    const policy = loadManifest().ai_policy || {};
+    const allowFreeSql = policy.allow_free_sql === true;
     const plan = {
       ...suppliedPlan,
       supported: true,
+      route: suppliedPlan.route || "free-sql",
+      queryId: suppliedPlan.queryId || "FREE_SQL",
+      strategy: suppliedPlan.strategy || "free-sql",
+      planner: suppliedPlan.planner || "user-supplied-sql",
+      sqlOrigin,
+      policy: {
+        allowFreeSql,
+        usedAllowFreeSql: sqlOrigin === "free-sql",
+        decision:
+          sqlOrigin === "free-sql"
+            ? allowFreeSql
+              ? "allowed"
+              : "denied"
+            : "not-applicable",
+      },
       sql: validation.sql || req.body?.sql,
       sqlValues: Array.isArray(req.body?.sqlValues) ? req.body.sqlValues : [],
       validation,
@@ -381,6 +403,20 @@ app.post(
       },
     };
     res.locals.queryObservation.plan = plan;
+    if (sqlOrigin === "free-sql" && !allowFreeSql) {
+      const error = new Error("当前 Semantic Policy 禁止执行自由 SQL");
+      await observeQuery({
+        operation: "execute-sql",
+        request: req.body,
+        plan,
+        error,
+      });
+      res.locals.queryObservation.logged = true;
+      return res.status(403).json({
+        error: error.message,
+        policy: plan.policy,
+      });
+    }
     if (!validation.valid) {
       await observeQuery({ operation: "execute-sql", request: req.body, plan });
       res.locals.queryObservation.logged = true;
@@ -546,6 +582,26 @@ app.listen(port, host, () => {
   if (host === "0.0.0.0" || host === "::")
     console.log(`LAN access is enabled on port ${port}`);
 });
+
+function classifySqlOrigin(plan, sql) {
+  if (plan.route === "semantic" && plan.cubeQuery) return "cube-generated";
+  if (plan.route === "tpch" && plan.queryId) {
+    const definition = getQuery(String(plan.queryId).toUpperCase());
+    if (definition?.route === "tpch") {
+      const expected = definition.buildSql(
+        plan.queryParameters || plan.parameters || {},
+      );
+      if (normalizeSql(expected) === normalizeSql(sql)) return "certified-sql";
+    }
+  }
+  return "free-sql";
+}
+
+function normalizeSql(sql) {
+  return String(sql || "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
 
 function validateIdentifier(value, label) {
   if (!/^[A-Za-z_][A-Za-z0-9_$-]*$/.test(String(value || "")))

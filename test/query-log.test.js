@@ -70,6 +70,40 @@ test("builds an observation with question, Cube Query, SQL, and timings", () => 
   assert.equal(observation.result.rowCount, 1);
 });
 
+test("marks user-supplied SQL as an allow_free_sql policy event", () => {
+  const observation = createObservation({
+    operation: "execute-sql",
+    request: {
+      question: "查看金额最高的十笔订单",
+      sql: "SELECT * FROM tpch_100.orders ORDER BY o_totalprice DESC LIMIT 10",
+    },
+    plan: {
+      supported: true,
+      route: "free-sql",
+      queryId: "FREE_SQL",
+      strategy: "free-sql",
+      planner: "user-supplied-sql",
+      sqlOrigin: "free-sql",
+      policy: {
+        allowFreeSql: true,
+        usedAllowFreeSql: true,
+        decision: "allowed",
+      },
+      sql: "SELECT * FROM tpch_100.orders ORDER BY o_totalprice DESC LIMIT 10",
+      validation: { valid: true, errors: [] },
+    },
+  });
+
+  assert.equal(observation.question, "查看金额最高的十笔订单");
+  assert.equal(observation.sqlOrigin, "free-sql");
+  assert.deepEqual(observation.policy, {
+    allowFreeSql: true,
+    usedAllowFreeSql: true,
+    decision: "allowed",
+  });
+  assert.match(observation.sql, /tpch_100\.orders/);
+});
+
 test("appends observations as JSON Lines", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "query-log-"));
   const previousPath = process.env.QUERY_LOG_PATH;

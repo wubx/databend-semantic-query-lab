@@ -35,6 +35,8 @@ function createObservation({ operation, request, plan, response, error }) {
     queryId: plan?.queryId,
     strategy: plan?.strategy,
     planner: plan?.planner,
+    sqlOrigin: plan?.sqlOrigin,
+    policy: plan?.policy,
     confidence: plan?.confidence,
     queryUnderstanding: plan?.queryUnderstanding,
     queryParameters: plan?.queryParameters,
