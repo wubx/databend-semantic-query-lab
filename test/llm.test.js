@@ -46,6 +46,55 @@ test("accepts a dynamic semantic query from the LLM", () => {
   assert.equal(plan.cubeQuery.timeDimensions[0].granularity, "year");
 });
 
+test("accepts the real LLM shape for a ten-row LineItem detail request", () => {
+  const dimensions = [
+    "LineItem.orderKey",
+    "LineItem.lineNumber",
+    "LineItem.partKey",
+    "LineItem.supplierKey",
+    "LineItem.lineStatus",
+    "LineItem.returnFlag",
+    "LineItem.shipMode",
+    "LineItem.shipInstruction",
+    "LineItem.shipDate",
+    "LineItem.commitDate",
+    "LineItem.receiptDate",
+    "LineItem.quantity",
+    "LineItem.extendedPrice",
+    "LineItem.discountRate",
+    "LineItem.taxRate",
+  ];
+  const plan = validateLlmPlan(
+    {
+      supported: true,
+      strategy: "dynamic",
+      queryId: null,
+      confidence: 0.99,
+      parameters: {},
+      cubeQuery: {
+        measures: [],
+        dimensions,
+        timeDimensions: [],
+        filters: [],
+        segments: [],
+        order: {
+          "LineItem.orderKey": "asc",
+          "LineItem.lineNumber": "asc",
+        },
+        limit: 10,
+        ungrouped: true,
+      },
+      reason: "请求订单明细表的10条原始记录。",
+    },
+    "订单明细表10行",
+    "auto",
+  );
+  assert.equal(plan.queryId, "DYNAMIC");
+  assert.equal(plan.cubeQuery.ungrouped, true);
+  assert.equal(plan.cubeQuery.limit, 10);
+  assert.deepEqual(plan.cubeQuery.dimensions, dimensions);
+});
+
 test("validates and normalizes Q6 parameters from the LLM", () => {
   const plan = validateLlmPlan(
     {
