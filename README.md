@@ -4,6 +4,28 @@
 
 它将业务问题转换为受治理的 Cube Query 或认证 TPC-H SQL，在执行前完成成员、参数和 SQL 安全校验，然后查询 Databend 并展示真实结果。同时提供可视化语义层、模块化 YAML 维护以及从 Databend 表生成模型草稿的能力。
 
+## 为什么使用 Databend 执行 AI / Semantic Query
+
+自然语言和语义层降低了查询门槛，也会让更多用户提出临时、长尾和跨实体问题。由语义模型编译出的 SQL 可能包含多表 `JOIN`、大范围扫描、`GROUP BY`、聚合、排序、时间计算和复杂过滤；它未必能依赖 OLTP 数据库中常见的逐行 B-tree 索引命中，所需的 CPU、内存、I/O 和并行计算资源也可能明显高于固定报表或点查询。
+
+这类工作负载更适合交给 Databend 这样的云原生分析引擎：
+
+- 面向列式扫描与分析型 SQL，可通过列裁剪和数据裁剪减少无关数据读取；
+- 支持分布式并行执行，适合大表扫描、多表关联和高基数聚合；
+- 存储与计算解耦，可针对 AI 问数带来的波动和突发负载独立扩展计算资源；
+- 让语义层和 LLM 专注于“理解并生成受治理的查询”，由 Databend 承担实际的重计算。
+
+这并不意味着生成的 SQL 可以不做优化。生产环境仍应结合 `EXPLAIN`、查询日志和真实负载，持续优化表设计、数据聚簇、过滤条件、查询并发和计算资源；高频且稳定的问题应优先沉淀为 `Certified Query`、认证 SQL，或在 Cube Server 模式中使用缓存和 Pre-aggregations。
+
+因此，本项目的核心分工是：
+
+```text
+LLM 负责理解自然语言
+Demo 负责语义约束、治理、安全与可观测
+Cube Compiler 负责将 Semantic Query 编译为 Databend SQL
+Databend 负责承载复杂 SQL 的分析计算与真实执行
+```
+
 ## 平台结构
 
 ```text
@@ -116,7 +138,7 @@ Cube Schema Compiler 和 `DatabendQuery` SQL Dialect 直接运行在 Demo 的 No
 保留的能力：
 
 - Cube YAML 编译
-- Measures、Dimensions、Segments、Filters、Joins、Order 和 Limit
+- Measures、Dimensions、Segments、Filters、Joins、Order、Limit 和 `ungrouped` 明细查询
 - Databend SQL 生成及参数绑定
 - Cube 成员别名映射
 
@@ -497,6 +519,8 @@ HOST=127.0.0.1
 | `MODEL_GENERATOR_MAX_TABLES`    | `20`                               | 单次最多生成的表数量                      |
 | `QUERY_LOG_ENABLED`             | `true`                             | 是否记录查询可观测日志                    |
 | `QUERY_LOG_PATH`                | `logs/query-observability.jsonl`   | 查询日志文件                              |
+| `LLM_LOG_ENABLED`               | `true`                             | 是否记录 LLM 请求和 RAW 响应              |
+| `LLM_LOG_PATH`                  | `logs/llm-observability.jsonl`     | LLM 交互日志文件                          |
 | `MODELER_LOG_PATH`              | `logs/modeler-observability.jsonl` | 模型生成日志文件                          |
 
 完整示例见 [`.env.example`](./.env.example)。
@@ -549,10 +573,11 @@ HOST=127.0.0.1
 
 ```text
 logs/query-observability.jsonl
+logs/llm-observability.jsonl
 logs/modeler-observability.jsonl
 ```
 
-查询日志记录问题、路由结果、Cube Query、最终 SQL、阶段耗时和执行结果；模型日志记录 Catalog 读取、规则生成、LLM 增强、回退原因和总耗时。
+查询日志记录问题、路由结果、Cube Query、最终 SQL、阶段耗时、降级原因、Policy 决策和执行结果；LLM 日志记录发送给模型的完整请求、Provider RAW 响应、解析结果、Token Usage、耗时和超时错误（不记录 API Key 或 Authorization Header）；模型日志记录 Catalog 读取、规则生成、LLM 增强、回退原因和总耗时。
 
 详细格式见：
 
