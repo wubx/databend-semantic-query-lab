@@ -223,6 +223,7 @@ function validateLlmPlan(result, question, mode) {
       question,
       mode,
       planner: "llm",
+      confidence: clamp(Number(result.confidence) || 0, 0, 1),
       reason: result.reason,
       rejectionDiagnostics: normalizeRejectionDiagnostics(result),
       message:

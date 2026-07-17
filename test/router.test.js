@@ -46,6 +46,15 @@ test("rejects unsupported questions", () => {
 
 test("allows read-only schema-qualified SQL", () => {
   assert.equal(validateSql("SELECT COUNT(*) FROM tpch_100.orders").valid, true);
+  assert.equal(
+    validateSql(`SELECT value FROM (
+      WITH source AS (
+        SELECT o_orderkey AS value FROM tpch_100.orders
+      )
+      SELECT value FROM source
+    ) AS governed_source`).valid,
+    true,
+  );
 });
 
 test("rejects writes, multiple statements, and other schemas", () => {

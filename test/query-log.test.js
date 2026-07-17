@@ -79,6 +79,7 @@ test("records the reason a planner rejects an unsupported question", () => {
       planner: "llm",
       reason: "订单金额与运输方式粒度不一致，直接汇总可能重复计算。",
       message: "无法准确回答这个问题。",
+      confidence: 0.87,
       rejectionDiagnostics: {
         category: "grain-mismatch",
         missingMembers: ["OrderShipping.averageOrderAmount"],
@@ -90,6 +91,7 @@ test("records the reason a planner rejects an unsupported question", () => {
   });
 
   assert.equal(observation.status, "rejected");
+  assert.equal(observation.confidence, 0.87);
   assert.deepEqual(observation.rejection, {
     message: "无法准确回答这个问题。",
     reason: "订单金额与运输方式粒度不一致，直接汇总可能重复计算。",

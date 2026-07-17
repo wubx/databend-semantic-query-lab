@@ -855,10 +855,14 @@ function renderLogRecord(item) {
   const rejectionBadge = rejection
     ? '<span class="log-fallback rejected">不支持</span>'
     : "";
+  const confidence = Number.isFinite(Number(item.confidence))
+    ? `${Math.round(Number(item.confidence) * 100)}%`
+    : null;
   const details = [
     item.operation,
     item.queryId,
     item.planner,
+    confidence ? `可信度 ${confidence}` : null,
     item.result?.rowCount !== undefined ? `${item.result.rowCount} rows` : null,
     item.timings?.totalRequestMs !== undefined
       ? `${item.timings.totalRequestMs} ms`
@@ -866,7 +870,7 @@ function renderLogRecord(item) {
         ? `${item.timings.totalMs} ms`
         : null,
   ].filter(Boolean);
-  return `<details class="log-record ${escapeHtml(item.status)}"><summary><span class="log-status-dot"></span><div class="log-question"><strong>${escapeHtml(item.question || "无自然语言问题")}</strong><small>${escapeHtml(details.join(" · "))}</small></div><span class="log-origin">${escapeHtml(originLabels[item.sqlOrigin] || item.route || "未分类")}</span>${fallback}${rejectionBadge}${policy}<time>${escapeHtml(formatLogTime(item.timestamp))}</time></summary><div class="log-detail"><div class="log-detail-grid"><div><span>Request ID</span><code>${escapeHtml(item.requestId)}</code></div><div><span>查询理解</span><code>${escapeHtml(item.queryUnderstanding?.method || item.strategy || "-")}</code></div><div><span>状态</span><code>${escapeHtml(item.status)}</code></div><div><span>SQL 来源</span><code>${escapeHtml(item.sqlOrigin || "-")}</code></div></div>${rejection ? `<section class="rejection-detail"><strong>不支持原因</strong><div class="fallback-message rejection-message"><b>查询无法映射到可信计划</b><span>来源：${escapeHtml(item.rejection?.source || item.planner || "planner")}</span><p>${escapeHtml(rejection)}</p>${renderRejectionMaintenance(item.rejection)}</div></section>` : ""}${item.fallback?.reason ? `<section class="fallback-detail"><strong>降级原因</strong><div class="fallback-message"><b>${escapeHtml(fallbackLabel(item.fallback.reason))}</b><span>来源：${escapeHtml(item.fallback.from || "未知")}</span><code>${escapeHtml(item.fallback.reason)}</code></div></section>` : ""}${item.cubeQuery ? `<section><strong>Cube Query</strong><pre class="code">${escapeHtml(JSON.stringify(item.cubeQuery, null, 2))}</pre></section>` : ""}${item.sql ? `<section><strong>SQL</strong><pre class="code">${escapeHtml(item.sql)}</pre></section>` : ""}${item.error ? `<p class="error">${escapeHtml(item.error)}</p>` : ""}${item.question ? `<button class="tiny" data-reuse-question="${escapeHtml(item.question)}">再次提问</button>` : ""}</div></details>`;
+  return `<details class="log-record ${escapeHtml(item.status)}"><summary><span class="log-status-dot"></span><div class="log-question"><strong>${escapeHtml(item.question || "无自然语言问题")}</strong><small>${escapeHtml(details.join(" · "))}</small></div><span class="log-origin">${escapeHtml(originLabels[item.sqlOrigin] || item.route || "未分类")}</span>${fallback}${rejectionBadge}${policy}<time>${escapeHtml(formatLogTime(item.timestamp))}</time></summary><div class="log-detail"><div class="log-detail-grid"><div><span>Request ID</span><code>${escapeHtml(item.requestId)}</code></div><div><span>查询理解</span><code>${escapeHtml(item.queryUnderstanding?.method || item.strategy || "-")}</code></div><div><span>状态</span><code>${escapeHtml(item.status)}</code></div><div><span>可信度</span><code>${escapeHtml(confidence || "-")}</code></div><div><span>SQL 来源</span><code>${escapeHtml(item.sqlOrigin || "-")}</code></div></div>${rejection ? `<section class="rejection-detail"><strong>不支持原因</strong><div class="fallback-message rejection-message"><b>查询无法映射到可信计划</b><span>来源：${escapeHtml(item.rejection?.source || item.planner || "planner")}</span><p>${escapeHtml(rejection)}</p>${renderRejectionMaintenance(item.rejection)}</div></section>` : ""}${item.fallback?.reason ? `<section class="fallback-detail"><strong>降级原因</strong><div class="fallback-message"><b>${escapeHtml(fallbackLabel(item.fallback.reason))}</b><span>来源：${escapeHtml(item.fallback.from || "未知")}</span><code>${escapeHtml(item.fallback.reason)}</code></div></section>` : ""}${item.cubeQuery ? `<section><strong>Cube Query</strong><pre class="code">${escapeHtml(JSON.stringify(item.cubeQuery, null, 2))}</pre></section>` : ""}${item.sql ? `<section><strong>SQL</strong><pre class="code">${escapeHtml(item.sql)}</pre></section>` : ""}${item.error ? `<p class="error">${escapeHtml(item.error)}</p>` : ""}${item.question ? `<button class="tiny" data-reuse-question="${escapeHtml(item.question)}">再次提问</button>` : ""}</div></details>`;
 }
 
 function isTimeoutFallback(reason) {

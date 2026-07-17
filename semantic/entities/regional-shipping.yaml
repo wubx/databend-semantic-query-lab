@@ -1,0 +1,182 @@
+entity:
+  name: RegionalShipping
+  title: 区域运输方式使用情况
+  description: 以客户所属区域和运输方式为粒度，统计订单明细、去重订单和去重客户的运输方式使用情况，用于分析区域内运输方式分布；不代表因果偏好。
+  source:
+    sql: |
+      WITH shipping_base AS (
+        SELECT
+          r.r_regionkey AS region_key,
+          r.r_name AS region_name,
+          l.l_shipmode AS ship_mode,
+          l.l_orderkey AS order_key,
+          c.c_custkey AS customer_key
+        FROM tpch_100.lineitem AS l
+        INNER JOIN tpch_100.orders AS o ON l.l_orderkey = o.o_orderkey
+        INNER JOIN tpch_100.customer AS c ON o.o_custkey = c.c_custkey
+        INNER JOIN tpch_100.nation AS n ON c.c_nationkey = n.n_nationkey
+        INNER JOIN tpch_100.region AS r ON n.n_regionkey = r.r_regionkey
+      ),
+      regional_totals AS (
+        SELECT
+          region_key,
+          COUNT(*) AS regional_line_count,
+          COUNT(DISTINCT order_key) AS regional_order_count,
+          COUNT(DISTINCT customer_key) AS regional_customer_count
+        FROM shipping_base
+        GROUP BY region_key
+      ),
+      mode_totals AS (
+        SELECT
+          region_key,
+          region_name,
+          ship_mode,
+          COUNT(*) AS line_count,
+          COUNT(DISTINCT order_key) AS order_count,
+          COUNT(DISTINCT customer_key) AS customer_count
+        FROM shipping_base
+        GROUP BY region_key, region_name, ship_mode
+      )
+      SELECT
+        m.region_key,
+        m.region_name,
+        m.ship_mode,
+        m.line_count,
+        m.order_count,
+        m.customer_count,
+        m.line_count / NULLIF(t.regional_line_count, 0) AS regional_line_share,
+        m.order_count / NULLIF(t.regional_order_count, 0) AS regional_order_usage_rate,
+        m.customer_count / NULLIF(t.regional_customer_count, 0) AS regional_customer_usage_rate
+      FROM mode_totals AS m
+      INNER JOIN regional_totals AS t ON m.region_key = t.region_key
+  keys:
+    primary: regionalShippingKey
+  dimensions:
+    - name: regionalShippingKey
+      title: 区域运输方式唯一键
+      description: 由区域编号和运输方式组成的分析粒度唯一键。
+      expr: CONCAT(CAST(region_key AS STRING), '-', ship_mode)
+      type: string
+      access: private
+    - name: regionKey
+      title: 区域编号
+      description: 客户所属区域的编号。
+      expr: region_key
+      type: number
+      synonyms:
+        - 区域编号
+        - region key
+    - name: regionName
+      title: 客户所属区域
+      description: 按客户所属国家映射得到的区域名称。
+      expr: region_name
+      type: string
+      synonyms:
+        - 客户区域
+        - 客户所属区域
+        - 区域
+        - region
+    - name: shipMode
+      title: 运输方式
+      description: 订单明细采用的运输方式。
+      expr: ship_mode
+      type: string
+      synonyms:
+        - 配送方式
+        - 发货方式
+        - 运输模式
+        - shipping mode
+  facts:
+    - name: lineCountValue
+      title: 区域运输方式明细数值
+      expr: line_count
+      type: number
+    - name: orderCountValue
+      title: 区域运输方式订单数值
+      expr: order_count
+      type: number
+    - name: customerCountValue
+      title: 区域运输方式客户数值
+      expr: customer_count
+      type: number
+    - name: regionalLineShareValue
+      title: 区域内明细占比数值
+      expr: regional_line_share
+      type: decimal
+    - name: regionalOrderUsageRateValue
+      title: 区域内订单使用率数值
+      expr: regional_order_usage_rate
+      type: decimal
+    - name: regionalCustomerUsageRateValue
+      title: 区域内客户使用率数值
+      expr: regional_customer_usage_rate
+      type: decimal
+  metrics:
+    - name: lineCount
+      title: 运输方式明细数量
+      description: 当前区域和运输方式组合下的订单明细数量。
+      type: sum
+      expr: lineCountValue
+      synonyms:
+        - 运输明细数量
+        - 明细数量
+        - shipping line count
+    - name: orderCount
+      title: 使用运输方式的去重订单数
+      description: 当前区域中包含该运输方式的去重订单数；一张多运输方式订单可同时计入多个运输方式。
+      type: sum
+      expr: orderCountValue
+      synonyms:
+        - 使用该运输方式的订单数
+        - 运输方式订单数
+        - orders using shipping mode
+    - name: customerCount
+      title: 使用运输方式的去重客户数
+      description: 当前区域中使用过该运输方式的去重客户数；同一客户可同时计入多个运输方式。
+      type: sum
+      expr: customerCountValue
+      synonyms:
+        - 使用该运输方式的客户数
+        - 运输方式客户数
+        - customers using shipping mode
+    - name: regionalLineShare
+      title: 区域内运输方式明细占比
+      description: 该运输方式的订单明细数量占区域全部订单明细数量的比例；适合比较区域内运输方式分布，不应直接解释为客户因果偏好。
+      type: sum
+      expr: regionalLineShareValue
+      format: percent
+      synonyms:
+        - 区域内运输方式占比
+        - 运输方式明细占比
+        - 区域运输偏好度
+        - regional shipping share
+    - name: regionalOrderUsageRate
+      title: 区域内运输方式订单使用率
+      description: 包含该运输方式的去重订单数占区域全部去重订单数的比例；多运输方式订单会计入多个方式，各方式使用率之和可能超过100%。
+      type: sum
+      expr: regionalOrderUsageRateValue
+      format: percent
+      synonyms:
+        - 运输方式订单占比
+        - 订单使用率
+        - regional order usage rate
+    - name: regionalCustomerUsageRate
+      title: 区域内运输方式客户使用率
+      description: 使用过该运输方式的去重客户数占区域全部有发货明细客户数的比例；客户可使用多种方式，各方式使用率之和可能超过100%。
+      type: sum
+      expr: regionalCustomerUsageRateValue
+      format: percent
+      synonyms:
+        - 运输方式客户占比
+        - 客户使用率
+        - 客户偏好运输方式
+        - regional customer usage rate
+  governance:
+    status: draft
+    owner: demo-team
+    notes:
+      - “偏好”默认应明确使用明细占比、订单使用率或客户使用率之一。
+      - 指标只描述样本使用分布，不证明运输方式与区域之间存在因果关系。
+  extensions:
+    cube:
+      refresh_key: false

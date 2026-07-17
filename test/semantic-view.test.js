@@ -5,7 +5,7 @@ const { buildSemanticView } = require("../src/semantic-view");
 
 test("builds a user-facing semantic model view", () => {
   const view = buildSemanticView();
-  assert.equal(view.stats.entities, 8);
+  assert.equal(view.stats.entities, 9);
   assert.equal(view.stats.verifiedQueries, 7);
   assert.ok(view.stats.members >= view.stats.publicMembers);
   assert.ok(view.stats.measures > 0);
@@ -19,6 +19,14 @@ test("builds a user-facing semantic model view", () => {
   assert.equal(totalPrice.expression, "orderTotal");
   assert.ok(totalPrice.synonyms.includes("订单金额合计"));
   assert.ok(totalPrice.usedBy.some((query) => query.id === "S2"));
+  const regionalShipping = view.entities.find(
+    (entity) => entity.name === "RegionalShipping",
+  );
+  assert.ok(
+    regionalShipping.members.some(
+      (member) => member.id === "RegionalShipping.regionalCustomerUsageRate",
+    ),
+  );
 });
 
 test("semantic model view exposes relationship and privacy metadata", () => {
