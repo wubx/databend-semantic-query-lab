@@ -628,7 +628,153 @@ Strategy: certified
 
 LLM 也可能对前两个问题选择语义等价的 `DYNAMIC`。如果必须稳定验证 Certified 路径，应直接使用第一、二节中的精确内置问题。
 
-## 六、安全拒绝测试
+## 六、`allow_free_sql` 与自由 SQL 测试
+
+`semantic/policy.yaml` 中的配置：
+
+```yaml
+ai_policy:
+  allow_free_sql: true
+```
+
+控制的是：**是否允许 `/api/query/execute-sql` 执行不是由 Cube Compiler 生成、也不是来自认证 SQL Template 的用户自带 SQL**。
+
+它不控制自然语言同义词匹配，也不会让 LLM 直接生成 SQL。自然语言规划仍然优先走：
+
+```text
+认证查询精确匹配
+→ LLM 选择认证查询
+→ LLM 动态生成受约束的 Cube Query
+→ Cube Compiler 生成 SQL
+```
+
+### 三种 SQL 来源
+
+查询日志中的 `sqlOrigin` 用于区分：
+
+| `sqlOrigin`      | 含义                                   | 是否使用 `allow_free_sql` |
+| ---------------- | -------------------------------------- | ------------------------- |
+| `cube-generated` | Cube Query 经 Cube Compiler 生成的 SQL | 否                        |
+| `certified-sql`  | 认证 SQL Template 生成的 SQL           | 否                        |
+| `free-sql`       | 用户直接提交、无法验证来源的 SQL       | 是                        |
+
+因此，即使设置：
+
+```yaml
+allow_free_sql: false
+```
+
+正常的 Semantic 查询和认证 SQL 仍然可以执行；只有 `free-sql` 会被拒绝。
+
+### 验证允许自由 SQL
+
+默认示例配置为：
+
+```yaml
+ai_policy:
+  allow_free_sql: true
+```
+
+可以直接调用执行接口测试：
+
+```bash
+curl -X POST http://127.0.0.1:4100/api/query/execute-sql \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "question": "查看订单表前十条记录",
+    "sql": "SELECT * FROM tpch_100.orders LIMIT 10"
+  }'
+```
+
+预期请求被 SQL Safety 校验后执行，返回计划中包含：
+
+```json
+{
+  "plan": {
+    "route": "free-sql",
+    "queryId": "FREE_SQL",
+    "planner": "user-supplied-sql",
+    "sqlOrigin": "free-sql",
+    "policy": {
+      "allowFreeSql": true,
+      "usedAllowFreeSql": true,
+      "decision": "allowed"
+    }
+  }
+}
+```
+
+### 验证关闭自由 SQL
+
+将配置改为：
+
+```yaml
+ai_policy:
+  allow_free_sql: false
+```
+
+重启服务后再次提交同一请求，预期返回：
+
+```text
+HTTP 403
+当前 Semantic Policy 禁止执行自由 SQL
+```
+
+响应中的策略证据为：
+
+```json
+{
+  "policy": {
+    "allowFreeSql": false,
+    "usedAllowFreeSql": true,
+    "decision": "denied"
+  }
+}
+```
+
+### `allow_free_sql=true` 不代表任意 SQL 都能运行
+
+自由 SQL 仍然必须通过 `src/sql-safety.js` 的安全检查：
+
+- 只允许单条 `SELECT` 或 `WITH ... SELECT`；
+- 禁止 `INSERT`、`UPDATE`、`DELETE`、DDL 和管理命令；
+- 禁止多语句 SQL；
+- 数据表必须显式使用允许的 schema；
+- 当前允许访问 `tpch_100` 和 `information_schema`。
+
+例如以下请求即使开启 `allow_free_sql` 也会被拒绝：
+
+```sql
+DELETE FROM tpch_100.orders;
+SELECT * FROM other_schema.orders;
+SELECT 1; SELECT 2;
+```
+
+### 在页面查看策略决策
+
+打开顶部导航中的“查询日志”，然后选择：
+
+```text
+SQL 来源 → 自由 SQL
+```
+
+可以查看每次自由 SQL 的：
+
+```text
+原始问题
+最终 SQL
+执行状态和耗时
+allow_free_sql · allowed
+allow_free_sql · denied
+```
+
+也可以通过 API 查询：
+
+```bash
+curl 'http://127.0.0.1:4100/api/query-observability?sqlOrigin=free-sql&limit=100'
+```
+
+## 七、安全拒绝测试
 
 这些问题用于证明系统不会编造不存在的指标或越过查询边界。
 
@@ -670,7 +816,7 @@ supported: false
 
 预期拒绝或只在明确解释口径后使用已建模的交易收入指标，不应把 `Part.totalRetailprice` 解释成真实销售收入或净利润。
 
-## 七、推荐验收集
+## 八、推荐验收集
 
 如果只想快速验证三条核心路径，使用以下问题。
 
@@ -722,7 +868,7 @@ Q6 / tpch / certified SQL template
 supported: false
 ```
 
-## 八、常见问题
+## 九、常见问题
 
 ### 为什么开启 LLM 后仍然没有调用 LLM？
 
@@ -760,6 +906,41 @@ Fallback 表示系统已转用确定性本地路由，不表示动态 Cube Query
 ```
 
 然后由 Cube Compiler 生成 SQL。LLM 输出协议中没有可执行 `sql` 字段。
+
+### `allow_free_sql=true` 会影响自然语言规划吗？
+
+不会。例如：
+
+```text
+按订单状态统计订单金额
+按订单状态统计订单总额
+```
+
+两种表达最终可能都选择 `S2`，原因是认证问题精确匹配、确定性规则或 LLM 同义语义理解，而不是 `allow_free_sql`。
+
+判断本次请求是否真正使用该配置，应查看查询日志：
+
+```json
+{
+  "sqlOrigin": "free-sql",
+  "policy": {
+    "usedAllowFreeSql": true,
+    "decision": "allowed"
+  }
+}
+```
+
+Cube 生成的 SQL 通常记录为：
+
+```json
+{
+  "sqlOrigin": "cube-generated",
+  "policy": {
+    "usedAllowFreeSql": false,
+    "decision": "not-applicable"
+  }
+}
+```
 
 ### `AI_ENABLED=false` 可以验证什么？
 
