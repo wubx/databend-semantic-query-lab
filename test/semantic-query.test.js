@@ -82,6 +82,45 @@ test("accepts up to eight dimensions for richer dynamic queries", () => {
   assert.equal(query.limit, 10);
 });
 
+test("accepts a measure-free detail query with three date fields", () => {
+  const query = validateSemanticQuery(
+    {
+      dimensions: [
+        "LineItem.orderKey",
+        "LineItem.lineNumber",
+        "LineItem.partKey",
+        "LineItem.supplierKey",
+        "LineItem.lineStatus",
+        "LineItem.returnFlag",
+        "LineItem.shipMode",
+        "LineItem.shipInstruction",
+      ],
+      timeDimensions: [
+        { dimension: "LineItem.shipDate" },
+        { dimension: "LineItem.commitDate" },
+        { dimension: "LineItem.receiptDate" },
+      ],
+      order: {
+        "LineItem.orderKey": "asc",
+        "LineItem.lineNumber": "asc",
+      },
+      limit: 10,
+    },
+    catalog,
+  );
+  assert.deepEqual(query.measures, []);
+  assert.equal(query.dimensions.length, 8);
+  assert.equal(query.timeDimensions.length, 3);
+  assert.equal(query.limit, 10);
+});
+
+test("rejects an empty dynamic query", () => {
+  assert.throws(
+    () => validateSemanticQuery({}, catalog),
+    /at least one measure, dimension, or time dimension/,
+  );
+});
+
 test("rejects unknown metrics and invalid time dimensions", () => {
   assert.throws(
     () => validateSemanticQuery({ measures: ["Orders.profit"] }, catalog),

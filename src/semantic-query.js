@@ -21,6 +21,7 @@ const ALLOWED_OPERATORS = new Set([
 ]);
 const MAX_MEASURES = 3;
 const MAX_DIMENSIONS = 8;
+const MAX_TIME_DIMENSIONS = 3;
 const MAX_FILTERS = 5;
 const MAX_LIMIT = 500;
 
@@ -40,9 +41,6 @@ function validateSemanticQuery(input, memberCatalog) {
     "dimensions",
     MAX_DIMENSIONS,
   );
-  if (!measures.length)
-    throw new Error("Dynamic Cube query requires at least one measure");
-
   for (const name of measures) requireMember(members, name, ["measure"]);
   for (const name of dimensions) requireMember(members, name, ["dimension"]);
 
@@ -60,8 +58,14 @@ function validateSemanticQuery(input, memberCatalog) {
       result.dateRange = validateDateRange(item.dateRange);
     return result;
   });
-  if (timeDimensions.length > 2)
-    throw new Error("At most 2 time dimensions are allowed");
+  if (timeDimensions.length > MAX_TIME_DIMENSIONS)
+    throw new Error(
+      `timeDimensions can contain at most ${MAX_TIME_DIMENSIONS} entries`,
+    );
+  if (!measures.length && !dimensions.length && !timeDimensions.length)
+    throw new Error(
+      "Dynamic Cube query requires at least one measure, dimension, or time dimension",
+    );
 
   const filters = (input.filters || []).map((filter) =>
     validateFilter(filter, members),
