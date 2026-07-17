@@ -168,6 +168,18 @@ h2 {
   white-space: pre-wrap;
   line-height: 1.6;
 }
+.evolution-issue.resolved {
+  opacity: 0.76;
+  border-color: #39785f;
+}
+.evolution-issue.resolved span {
+  color: #85e7a9;
+}
+.evolution-human-actions .success {
+  color: #9ff1bb;
+  border-color: #39785f;
+  background: rgba(38, 111, 70, 0.25);
+}
 .evolution-collaboration {
   display: grid;
   gap: 10px;

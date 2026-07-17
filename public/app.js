@@ -31,6 +31,7 @@ const elements = Object.fromEntries(
     "evolutionReviewerContext",
     "evolutionOpenYaml",
     "evolutionReplay",
+    "resolveEvolution",
     "analyzeEvolution",
     "evolutionProposal",
     "observabilityPage",
@@ -211,6 +212,10 @@ async function boot() {
   elements.analyzeEvolution.addEventListener("click", analyzeSelectedEvolution);
   elements.evolutionOpenYaml.addEventListener("click", openEvolutionYaml);
   elements.evolutionReplay.addEventListener("click", replayEvolutionQuestion);
+  elements.resolveEvolution.addEventListener(
+    "click",
+    toggleEvolutionResolution,
+  );
   elements.refreshLogs.addEventListener("click", loadQueryLogs);
   elements.logOriginFilter.addEventListener("change", loadQueryLogs);
   elements.logStatusFilter.addEventListener("change", loadQueryLogs);
@@ -853,6 +858,7 @@ function renderEvolutionStats() {
   const stats = evolutionStatsData;
   const cards = [
     ["all", stats.issueCount, "全部待办"],
+    ["resolved", stats.resolvedIssues || 0, "已修复"],
     ["repeated", stats.repeatedIssues, "重复缺口"],
     ["semantic-gap", stats.categories["semantic-gap"] || 0, "缺少成员"],
     ["grain-mismatch", stats.categories["grain-mismatch"] || 0, "粒度冲突"],
@@ -868,10 +874,17 @@ function renderEvolutionStats() {
 }
 
 function filteredEvolutionIssues() {
-  if (evolutionFilter === "all") return evolutionIssues;
+  if (evolutionFilter === "all")
+    return evolutionIssues.filter((issue) => !issue.resolved);
+  if (evolutionFilter === "resolved")
+    return evolutionIssues.filter((issue) => issue.resolved);
   if (evolutionFilter === "repeated")
-    return evolutionIssues.filter((issue) => issue.count > 1);
-  return evolutionIssues.filter((issue) => issue.category === evolutionFilter);
+    return evolutionIssues.filter(
+      (issue) => !issue.resolved && issue.count > 1,
+    );
+  return evolutionIssues.filter(
+    (issue) => !issue.resolved && issue.category === evolutionFilter,
+  );
 }
 
 function renderEvolutionIssues() {
@@ -882,22 +895,26 @@ function renderEvolutionIssues() {
 }
 
 function renderEvolutionIssue(issue) {
-  return `<button class="evolution-issue ${issue.id === selectedEvolutionIssueId ? "active" : ""}" data-evolution-issue="${escapeHtml(issue.id)}"><span>${escapeHtml(evolutionCategoryLabel(issue.category))}</span><strong>${escapeHtml(issue.questions[0] || "无问题文本")}</strong><small>${issue.count} 次 · ${escapeHtml((issue.affectedEntities || []).join("、") || "未识别实体")}</small></button>`;
+  return `<button class="evolution-issue ${issue.resolved ? "resolved" : ""} ${issue.id === selectedEvolutionIssueId ? "active" : ""}" data-evolution-issue="${escapeHtml(issue.id)}"><span>${escapeHtml(issue.resolved ? "已修复" : evolutionCategoryLabel(issue.category))}</span><strong>${escapeHtml(issue.questions[0] || "无问题文本")}</strong><small>${issue.count} 次 · ${escapeHtml((issue.affectedEntities || []).join("、") || "未识别实体")}${issue.resolution?.note ? ` · ${escapeHtml(issue.resolution.note)}` : ""}</small></button>`;
 }
 
 function selectEvolutionIssue(issueId) {
   const issue = evolutionIssues.find((item) => item.id === issueId);
   if (!issue) return;
   selectedEvolutionIssueId = issueId;
-  elements.evolutionIssues.innerHTML = evolutionIssues
-    .map(renderEvolutionIssue)
-    .join("");
+  renderEvolutionIssues();
   elements.evolutionHeading.textContent = issue.questions[0] || "语义缺口";
-  elements.evolutionStatus.textContent = `${evolutionCategoryLabel(issue.category)} · ${issue.count} 次`;
+  elements.evolutionStatus.textContent = issue.resolved
+    ? "已修复"
+    : `${evolutionCategoryLabel(issue.category)} · ${issue.count} 次`;
   elements.evolutionDetail.className = "";
   elements.evolutionDetail.innerHTML = `<div class="evolution-diagnostics"><div><span>代表问题</span><p>${issue.questions.map(escapeHtml).join("<br>")}</p></div><div><span>拒绝原因</span><p>${issue.reasons.map(escapeHtml).join("<br>")}</p></div><div><span>缺失成员</span><code>${escapeHtml(issue.missingMembers.join("、") || "-")}</code></div><div><span>涉及实体</span><code>${escapeHtml(issue.affectedEntities.join("、") || "-")}</code></div><div><span>候选 YAML</span><code>${escapeHtml(issue.yamlCandidates.join("\n") || "-")}</code></div><div><span>已有建议</span><p>${issue.suggestedActions.map(escapeHtml).join("<br>") || "-"}</p></div></div>`;
   elements.evolutionCollaboration.classList.remove("hidden");
-  elements.evolutionReviewerContext.value = "";
+  elements.evolutionReviewerContext.value = issue.resolution?.note || "";
+  elements.resolveEvolution.textContent = issue.resolved
+    ? "重新打开"
+    : "标记已修复";
+  elements.resolveEvolution.classList.toggle("success", !issue.resolved);
   elements.analyzeEvolution.disabled = false;
   elements.evolutionProposal.classList.add("hidden");
   elements.evolutionProposal.innerHTML = "";
@@ -925,6 +942,44 @@ function replayEvolutionQuestion() {
   elements.question.value = issue.questions[0];
   showPage("query");
   elements.question.focus();
+}
+
+async function toggleEvolutionResolution() {
+  const issue = evolutionIssues.find(
+    (item) => item.id === selectedEvolutionIssueId,
+  );
+  if (!issue) return;
+  const status = issue.resolved ? "open" : "resolved";
+  const action = issue.resolved ? "重新打开" : "标记已修复";
+  if (!window.confirm(`确认${action}这个语义缺口？`)) return;
+  elements.resolveEvolution.disabled = true;
+  try {
+    await api(`/api/semantic-evolution/issues/${issue.id}/status`, {
+      method: "POST",
+      body: JSON.stringify({
+        status,
+        note: elements.evolutionReviewerContext.value.trim(),
+      }),
+    });
+    selectedEvolutionIssueId = null;
+    if (status === "resolved") evolutionFilter = "all";
+    await loadEvolutionIssues();
+    elements.evolutionHeading.textContent =
+      status === "resolved" ? "已标记修复" : "待办已重新打开";
+    elements.evolutionStatus.textContent =
+      status === "resolved" ? "已修复" : "Open";
+    elements.evolutionDetail.className = "empty";
+    elements.evolutionDetail.textContent =
+      status === "resolved"
+        ? "该问题已移出待办列表，可点击顶部“已修复”查看或重新打开。"
+        : "该问题已恢复到语义缺口待办。";
+    elements.evolutionCollaboration.classList.add("hidden");
+    elements.evolutionProposal.classList.add("hidden");
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    elements.resolveEvolution.disabled = false;
+  }
 }
 
 async function analyzeSelectedEvolution() {

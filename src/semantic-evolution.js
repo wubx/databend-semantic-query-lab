@@ -1,10 +1,13 @@
 const crypto = require("node:crypto");
+const fs = require("node:fs/promises");
+const path = require("node:path");
 
 const { requestCompletion, isEnabled } = require("./llm");
 const { listQueryObservations } = require("./query-log");
 const { readSemanticSourceFile } = require("./semantic-source-files");
 
 async function listEvolutionIssues() {
+  const resolutions = await readEvolutionResolutions();
   const { observations } = await listQueryObservations({
     status: "rejected",
     limit: 500,
@@ -38,14 +41,23 @@ async function listEvolutionIssues() {
     mergeUnique(existing.yamlCandidates, rejection.yamlCandidates);
     groups.set(key, existing);
   }
-  const issues = [...groups.values()].sort(
-    (a, b) => b.count - a.count || String(b.lastSeen).localeCompare(a.lastSeen),
-  );
+  const allIssues = [...groups.values()]
+    .map((issue) => ({
+      ...issue,
+      resolution: resolutions.get(issue.id) || null,
+      resolved: resolutions.get(issue.id)?.status === "resolved",
+    }))
+    .sort(
+      (a, b) =>
+        b.count - a.count || String(b.lastSeen).localeCompare(a.lastSeen),
+    );
+  const issues = allIssues.filter((issue) => !issue.resolved);
   return {
-    issues,
+    issues: allIssues,
     stats: {
       rejectedRecords: observations.length,
       issueCount: issues.length,
+      resolvedIssues: allIssues.length - issues.length,
       categories: countBy(issues, (issue) => issue.category),
       repeatedIssues: issues.filter((issue) => issue.count > 1).length,
     },
@@ -99,6 +111,52 @@ async function analyzeEvolutionIssue(issueId, reviewerContext = "") {
   return { issue, proposal, reviewRequired: true, publishEnabled: false };
 }
 
+async function setEvolutionIssueStatus(issueId, status, note = "") {
+  if (!new Set(["resolved", "open"]).has(status))
+    throw new Error("Invalid semantic evolution issue status");
+  const { issues } = await listEvolutionIssues();
+  if (!issues.some((issue) => issue.id === issueId))
+    throw new Error("Unknown semantic evolution issue");
+  const record = {
+    timestamp: new Date().toISOString(),
+    issueId,
+    status,
+    note: String(note || "")
+      .trim()
+      .slice(0, 2000),
+  };
+  const filePath = evolutionResolutionPath();
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.appendFile(filePath, `${JSON.stringify(record)}\n`, "utf8");
+  return record;
+}
+
+async function readEvolutionResolutions() {
+  try {
+    const content = await fs.readFile(evolutionResolutionPath(), "utf8");
+    const latest = new Map();
+    for (const line of content.split("\n").filter(Boolean)) {
+      try {
+        const record = JSON.parse(line);
+        if (record.issueId) latest.set(record.issueId, record);
+      } catch {
+        // Ignore malformed historical lines and preserve the remaining audit log.
+      }
+    }
+    return latest;
+  } catch (error) {
+    if (error.code === "ENOENT") return new Map();
+    throw error;
+  }
+}
+
+function evolutionResolutionPath() {
+  return path.resolve(
+    process.env.SEMANTIC_EVOLUTION_LOG_PATH ||
+      path.join(__dirname, "..", "logs", "semantic-evolution.jsonl"),
+  );
+}
+
 function issueKey(rejection, question) {
   const category = rejection.category || "unclassified";
   const entities = [...(rejection.affectedEntities || [])].sort().join("|");
@@ -135,4 +193,8 @@ function countBy(items, key) {
   );
 }
 
-module.exports = { analyzeEvolutionIssue, listEvolutionIssues };
+module.exports = {
+  analyzeEvolutionIssue,
+  listEvolutionIssues,
+  setEvolutionIssueStatus,
+};
