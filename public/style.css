@@ -199,7 +199,8 @@ h2 {
   color: #ffc878;
   border-color: #826033;
 }
-.log-fallback.timeout {
+.log-fallback.timeout,
+.log-fallback.rejected {
   color: #ff9cae;
   border-color: #91465a;
   background: rgba(126, 38, 59, 0.18);
@@ -257,8 +258,10 @@ h2 {
   color: #88a2b9;
   font-size: 10px;
 }
-.fallback-message code {
-  white-space: normal;
+.fallback-message code,
+.fallback-message p {
+  margin: 0;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .log-detail section > strong {

@@ -41,6 +41,14 @@ function createObservation({ operation, request, plan, response, error }) {
     queryUnderstanding: plan?.queryUnderstanding,
     queryParameters: plan?.queryParameters,
     fallback: plan?.fallback,
+    rejection:
+      plan?.supported === false
+        ? {
+            message: plan.message,
+            reason: plan.reason || plan.message,
+            source: plan.planner || plan.queryUnderstanding?.method,
+          }
+        : undefined,
     cubeQuery: plan?.cubeQuery,
     semanticGateway: plan?.semanticGateway,
     sql: plan?.sql,
@@ -89,6 +97,8 @@ async function listQueryObservations({
           item.queryId,
           item.sql,
           item.error,
+          item.rejection?.message,
+          item.rejection?.reason,
           item.fallback?.from,
           item.fallback?.reason,
         ]

@@ -70,6 +70,27 @@ test("builds an observation with question, Cube Query, SQL, and timings", () => 
   assert.equal(observation.result.rowCount, 1);
 });
 
+test("records the reason a planner rejects an unsupported question", () => {
+  const observation = createObservation({
+    operation: "plan",
+    request: { question: "订单金额大小与运输方式选择有关联吗？" },
+    plan: {
+      supported: false,
+      planner: "llm",
+      reason: "订单金额与运输方式粒度不一致，直接汇总可能重复计算。",
+      message: "无法准确回答这个问题。",
+      queryUnderstanding: { llmUsed: true, method: "llm" },
+    },
+  });
+
+  assert.equal(observation.status, "rejected");
+  assert.deepEqual(observation.rejection, {
+    message: "无法准确回答这个问题。",
+    reason: "订单金额与运输方式粒度不一致，直接汇总可能重复计算。",
+    source: "llm",
+  });
+});
+
 test("lists and summarizes recent query observations", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "query-list-"));
   const previousPath = process.env.QUERY_LOG_PATH;
