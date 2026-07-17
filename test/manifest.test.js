@@ -30,6 +30,14 @@ test("compiles Cube YAML with semantic metadata", () => {
       .find((item) => item.name === "totalPrice")
       .meta.synonyms.includes("订单金额合计"),
   );
+  assert.ok(
+    orders.dimensions.some(
+      (item) =>
+        item.name === "orderTotal" &&
+        item.type === "number" &&
+        item.meta.semantic_kind === "fact",
+    ),
+  );
   assert.match(
     stringifyCubeModel(artifacts.cubeModel),
     /sql_table: tpch_100\.orders/,

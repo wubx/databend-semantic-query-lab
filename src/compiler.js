@@ -40,6 +40,7 @@ function compileCubeModel(manifest) {
       ...(entity.time_dimensions || []).map((dimension) =>
         compileDimension(entity, dimension, true),
       ),
+      ...(entity.facts || []).map((fact) => compileFactDimension(fact)),
     ];
     cube.measures = (entity.metrics || []).map((metric) => {
       const fact = factsByEntity.get(entity.name).get(metric.expr);
@@ -102,6 +103,18 @@ function compileDimension(entity, dimension, timeDimension) {
     primary_key: entity.keys?.primary === dimension.name,
     public: dimension.access !== "private",
     meta: semanticMeta(dimension, { enum: dimension.enum }),
+  });
+}
+
+function compileFactDimension(fact) {
+  return compact({
+    name: fact.name,
+    title: fact.title,
+    description: fact.description,
+    sql: fact.expr,
+    type: "number",
+    public: fact.access !== "private",
+    meta: semanticMeta(fact, { semantic_kind: "fact" }),
   });
 }
 

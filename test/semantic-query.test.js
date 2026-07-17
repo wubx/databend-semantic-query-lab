@@ -116,6 +116,37 @@ test("accepts a measure-free detail query with three date fields", () => {
   assert.equal(query.ungrouped, true);
 });
 
+test("accepts public facts in ungrouped detail queries", () => {
+  const query = validateSemanticQuery(
+    {
+      dimensions: ["Orders.orderKey", "Orders.orderTotal"],
+      order: { "Orders.orderTotal": "desc" },
+      ungrouped: true,
+      limit: 10,
+    },
+    catalog,
+  );
+  assert.deepEqual(query.dimensions, ["Orders.orderKey", "Orders.orderTotal"]);
+  assert.deepEqual(query.order, { "Orders.orderTotal": "desc" });
+  assert.equal(query.ungrouped, true);
+  assert.equal(query.limit, 10);
+});
+
+test("rejects facts in grouped queries", () => {
+  assert.throws(
+    () =>
+      validateSemanticQuery(
+        {
+          dimensions: ["Orders.orderKey", "Orders.orderTotal"],
+          order: { "Orders.orderTotal": "desc" },
+          limit: 10,
+        },
+        catalog,
+      ),
+    /Orders.orderTotal must be one of: dimension/,
+  );
+});
+
 test("rejects measures in ungrouped detail queries", () => {
   assert.throws(
     () =>

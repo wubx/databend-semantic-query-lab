@@ -21,7 +21,7 @@ async function validateCubeMeta(manifest = loadManifest()) {
 
 function compareMeta(manifest, meta) {
   const expected = compileMemberCatalog(manifest).members.filter(
-    (member) => member.public && member.kind !== "fact",
+    (member) => member.public,
   );
   const actual = new Map();
   for (const cube of meta.cubes || []) {
@@ -40,7 +40,10 @@ function compareMeta(manifest, meta) {
   for (const member of expected) {
     const kind = actual.get(member.member);
     if (!kind) missing.push(member.member);
-    else if (kind !== member.kind)
+    else if (
+      kind !== member.kind &&
+      !(member.kind === "fact" && kind === "dimension")
+    )
       mismatched.push({
         member: member.member,
         expected: member.kind,

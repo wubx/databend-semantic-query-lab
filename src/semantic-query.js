@@ -41,8 +41,16 @@ function validateSemanticQuery(input, memberCatalog) {
     "dimensions",
     MAX_DIMENSIONS,
   );
+  const ungrouped = input.ungrouped === true;
+  if (input.ungrouped != null && typeof input.ungrouped !== "boolean")
+    throw new Error("ungrouped must be a boolean");
   for (const name of measures) requireMember(members, name, ["measure"]);
-  for (const name of dimensions) requireMember(members, name, ["dimension"]);
+  for (const name of dimensions)
+    requireMember(
+      members,
+      name,
+      ungrouped ? ["dimension", "fact"] : ["dimension"],
+    );
 
   const timeDimensions = (input.timeDimensions || []).map((item) => {
     if (!item || typeof item !== "object")
@@ -77,7 +85,13 @@ function validateSemanticQuery(input, memberCatalog) {
 
   const order = {};
   for (const [name, direction] of Object.entries(input.order || {})) {
-    requireMember(members, name, ["measure", "dimension", "time_dimension"]);
+    requireMember(
+      members,
+      name,
+      ungrouped
+        ? ["measure", "dimension", "time_dimension", "fact"]
+        : ["measure", "dimension", "time_dimension"],
+    );
     if (!["asc", "desc"].includes(direction))
       throw new Error(`Invalid order direction for ${name}`);
     order[name] = direction;
@@ -85,9 +99,6 @@ function validateSemanticQuery(input, memberCatalog) {
   if (Object.keys(order).length > 3)
     throw new Error("At most 3 order entries are allowed");
 
-  const ungrouped = input.ungrouped === true;
-  if (input.ungrouped != null && typeof input.ungrouped !== "boolean")
-    throw new Error("ungrouped must be a boolean");
   if (ungrouped && measures.length)
     throw new Error("Ungrouped detail queries cannot contain measures");
 

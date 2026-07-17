@@ -17,6 +17,10 @@ function fakeMeta(manifest) {
           name: `${entity.name}.${member.name}`,
           type: member.type,
         })),
+        ...(entity.facts || []).map((member) => ({
+          name: `${entity.name}.${member.name}`,
+          type: "number",
+        })),
         ...(entity.time_dimensions || []).map((member) => ({
           name: `${entity.name}.${member.name}`,
           type: "time",
