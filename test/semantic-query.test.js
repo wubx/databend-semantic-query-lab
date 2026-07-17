@@ -104,14 +104,31 @@ test("accepts a measure-free detail query with three date fields", () => {
         "LineItem.orderKey": "asc",
         "LineItem.lineNumber": "asc",
       },
-      limit: 10,
+      ungrouped: true,
+      limit: 1000,
     },
     catalog,
   );
   assert.deepEqual(query.measures, []);
   assert.equal(query.dimensions.length, 8);
   assert.equal(query.timeDimensions.length, 3);
-  assert.equal(query.limit, 10);
+  assert.equal(query.limit, 100);
+  assert.equal(query.ungrouped, true);
+});
+
+test("rejects measures in ungrouped detail queries", () => {
+  assert.throws(
+    () =>
+      validateSemanticQuery(
+        {
+          measures: ["LineItem.count"],
+          dimensions: ["LineItem.orderKey"],
+          ungrouped: true,
+        },
+        catalog,
+      ),
+    /cannot contain measures/,
+  );
 });
 
 test("rejects an empty dynamic query", () => {

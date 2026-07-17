@@ -85,6 +85,12 @@ function validateSemanticQuery(input, memberCatalog) {
   if (Object.keys(order).length > 3)
     throw new Error("At most 3 order entries are allowed");
 
+  const ungrouped = input.ungrouped === true;
+  if (input.ungrouped != null && typeof input.ungrouped !== "boolean")
+    throw new Error("ungrouped must be a boolean");
+  if (ungrouped && measures.length)
+    throw new Error("Ungrouped detail queries cannot contain measures");
+
   const requestedLimit = input.limit == null ? 100 : Number(input.limit);
   if (!Number.isInteger(requestedLimit) || requestedLimit < 1)
     throw new Error("limit must be a positive integer");
@@ -96,7 +102,8 @@ function validateSemanticQuery(input, memberCatalog) {
     filters: filters.length ? filters : undefined,
     segments: segments.length ? segments : undefined,
     order: Object.keys(order).length ? order : undefined,
-    limit: Math.min(requestedLimit, MAX_LIMIT),
+    limit: Math.min(requestedLimit, ungrouped ? 100 : MAX_LIMIT),
+    ungrouped: ungrouped || undefined,
     timezone: "UTC",
   });
 }

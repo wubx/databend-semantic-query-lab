@@ -109,6 +109,8 @@ function normalizeCubeQuery(cubeQuery) {
     segments: cubeQuery.segments || [],
     order,
     rowLimit: cubeQuery.limit ?? cubeQuery.rowLimit ?? 10000,
+    ungrouped: cubeQuery.ungrouped === true,
+    allowUngroupedWithoutPrimaryKey: cubeQuery.ungrouped === true,
     timezone: cubeQuery.timezone || "UTC",
   };
 }

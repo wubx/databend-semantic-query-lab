@@ -34,7 +34,8 @@ async function planWithLlm(question, mode = "auto") {
           "You are a strict semantic query planner for Cube and Databend.",
           "Use this priority: (1) select an exact certified query, (2) build a dynamic Cube Query from public semantic members, (3) reject.",
           "For TPC-H routes, only select a certified query ID. Never generate SQL.",
-          "For dynamic semantic routes, queryId must be null and cubeQuery may contain only measures, dimensions, timeDimensions, filters, segments, order, and limit.",
+          "For dynamic semantic routes, queryId must be null and cubeQuery may contain only measures, dimensions, timeDimensions, filters, segments, order, limit, and ungrouped.",
+          "For raw record/detail/list requests, set ungrouped to true, omit measures, select only useful public dimensions, and set an explicit limit no greater than 100. Use ungrouped false or omit it for grouped analysis and distinct dimension-value questions.",
           "Efficiency/效率 questions may use governed efficiency members such as delayedCount, averageTransitDays, and averageDelayDays; never calculate unmodeled ratios.",
           "Use segments for semantic members whose kind is filter; for example LineItem.delayedReceipt must appear in segments, not filters.",
           "Use exact member identifiers from the supplied semanticMemberCatalog.",
@@ -43,7 +44,7 @@ async function planWithLlm(question, mode = "auto") {
           "Never invent a metric. Interpret generic sales/销售情况/销售额 as Orders.totalPrice only when that modeled metric fits the question.",
           "For certified Q6, extract only startDate, endDate, discountMin, discountMax, and quantity. Percentages must be decimals.",
           "Return JSON only with this shape:",
-          '{"supported":boolean,"strategy":"certified|dynamic|reject","queryId":string|null,"confidence":number,"parameters":object,"cubeQuery":object|null,"reason":string}',
+          '{"supported":boolean,"strategy":"certified|dynamic|reject","queryId":string|null,"confidence":number,"parameters":object,"cubeQuery":{"measures":string[],"dimensions":string[],"timeDimensions":object[],"filters":object[],"segments":string[],"order":object,"limit":number,"ungrouped":boolean}|null,"reason":string}',
         ].join("\n"),
       },
       {

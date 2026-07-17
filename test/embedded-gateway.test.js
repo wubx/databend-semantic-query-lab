@@ -18,8 +18,20 @@ test("normalizes Cube Query order, limits, and defaults for embedded compilation
   });
   assert.deepEqual(query.order, [{ id: "Orders.totalPrice", desc: true }]);
   assert.equal(query.rowLimit, 25);
+  assert.equal(query.ungrouped, false);
   assert.equal(query.timezone, "UTC");
   assert.deepEqual(query.filters, []);
+});
+
+test("normalizes ungrouped detail queries for embedded compilation", () => {
+  const query = normalizeCubeQuery({
+    dimensions: ["LineItem.orderKey", "LineItem.lineNumber"],
+    ungrouped: true,
+    limit: 10,
+  });
+  assert.equal(query.ungrouped, true);
+  assert.equal(query.allowUngroupedWithoutPrimaryKey, true);
+  assert.equal(query.rowLimit, 10);
 });
 
 test("remaps embedded SQL aliases to Cube member names", () => {
