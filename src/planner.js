@@ -3,6 +3,7 @@ const { isEnabled, planWithLlm } = require("./llm");
 const { deterministicPlan, exactCertifiedPlan } = require("./router");
 const { getSemanticGateway } = require("./semantic-gateway");
 const { validateSql } = require("./sql-safety");
+const { bindWorkflowDetail } = require("./semantic-workflow");
 
 async function createPlan({ question, mode = "auto", planner = "auto" }) {
   const totalStartedAt = performance.now();
@@ -57,7 +58,9 @@ async function createPlan({ question, mode = "auto", planner = "auto" }) {
   plan.queryParameters = collectQueryParameters(plan);
 
   const sqlStartedAt = performance.now();
-  if (plan.route === "semantic") {
+  if (plan.route === "semantic-workflow") {
+    await compileWorkflowPlan(plan);
+  } else if (plan.route === "semantic") {
     const generated = await getSemanticGateway().compile(plan.cubeQuery);
     plan.sql = generated.sql;
     plan.sqlValues = generated.values;
@@ -71,11 +74,52 @@ async function createPlan({ question, mode = "auto", planner = "auto" }) {
   timings.sqlGenerationMs = elapsed(sqlStartedAt);
 
   const validationStartedAt = performance.now();
-  plan.validation = validateSql(plan.sql);
+  if (plan.route !== "semantic-workflow")
+    plan.validation = validateSql(plan.sql);
   timings.validationMs = elapsed(validationStartedAt);
   timings.totalMs = elapsed(totalStartedAt);
   plan.timings = timings;
   return plan;
+}
+
+async function compileWorkflowPlan(plan) {
+  const gateway = getSemanticGateway();
+  const stages = [];
+  for (const stage of plan.workflow.stages) {
+    if (stage.role === "detail") {
+      stages.push({ ...stage, sql: null, sqlValues: [], validation: null });
+      continue;
+    }
+    const generated = await gateway.compile(stage.query);
+    stages.push({
+      ...stage,
+      sql: generated.sql,
+      sqlValues: generated.values,
+      validation: validateSql(generated.sql),
+      semanticGateway: generated.gateway,
+    });
+  }
+  plan.workflow.stages = stages;
+  plan.sqlOrigin = "cube-workflow";
+  plan.semanticGateway = stages[0].semanticGateway;
+  plan.validation = stages[0].validation;
+}
+
+async function compileBoundWorkflowDetail(plan, parentData) {
+  const binding = bindWorkflowDetail(plan.workflow, parentData);
+  if (binding.empty) return { ...binding, stage: plan.workflow.stages[1] };
+  const generated = await getSemanticGateway().compile(binding.query);
+  return {
+    ...binding,
+    stage: {
+      ...plan.workflow.stages[1],
+      query: binding.query,
+      sql: generated.sql,
+      sqlValues: generated.values,
+      validation: validateSql(generated.sql),
+      semanticGateway: generated.gateway,
+    },
+  };
 }
 
 function collectQueryParameters(plan) {
@@ -100,4 +144,4 @@ function elapsed(startedAt) {
   return Math.round((performance.now() - startedAt) * 10) / 10;
 }
 
-module.exports = { createPlan };
+module.exports = { compileBoundWorkflowDetail, createPlan };

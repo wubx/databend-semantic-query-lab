@@ -31,7 +31,7 @@ const {
   assertCompatibleReplacement,
 } = require("./model-publisher");
 const { modelerLogPath, observeModelGeneration } = require("./modeler-log");
-const { createPlan } = require("./planner");
+const { compileBoundWorkflowDetail, createPlan } = require("./planner");
 const { loadManifest } = require("./manifest");
 const {
   listQueryObservations,
@@ -553,6 +553,19 @@ app.post(
     }
 
     const startedAt = Date.now();
+    if (plan.route === "semantic-workflow") {
+      const response = await executeSemanticWorkflow(plan, req.body?.question);
+      response.timings.planningMs = plan.timings?.totalMs;
+      response.timings.totalMs = elapsed(requestStartedAt);
+      await observeQuery({
+        operation: "execute",
+        request: req.body,
+        plan,
+        response,
+      });
+      res.locals.queryObservation.logged = true;
+      return res.json(response);
+    }
     if (plan.route === "semantic") {
       const result = await getSemanticGateway().execute(plan.cubeQuery);
       const response = {
@@ -607,6 +620,87 @@ app.post(
     return res.json(response);
   }),
 );
+
+async function executeSemanticWorkflow(plan, question) {
+  const [parentStage] = plan.workflow.stages;
+  const parentStartedAt = performance.now();
+  const parentResult = await getSemanticGateway().execute(parentStage.query);
+  const parentMs = elapsed(parentStartedAt);
+  const bound = await compileBoundWorkflowDetail(plan, parentResult.data);
+  plan.workflow.stages[1] = bound.stage;
+  if (bound.empty) {
+    return {
+      plan,
+      data: [],
+      durationMs: parentMs,
+      source: "Semantic Workflow → Cube → Databend",
+      workflow: {
+        exportedKeyCount: 0,
+        parentRowCount: parentResult.data.length,
+        detailRowCount: 0,
+        complete: true,
+        stages: [
+          {
+            id: parentStage.id,
+            rowCount: parentResult.data.length,
+            durationMs: parentMs,
+          },
+        ],
+      },
+      timings: {
+        queryMs: parentMs,
+        workflowStages: { [parentStage.id]: parentMs },
+      },
+      summary: "父阶段没有返回记录，因此没有可展开的明细。",
+    };
+  }
+  if (!bound.stage.validation.valid)
+    throw new Error(
+      `Workflow detail SQL validation failed: ${bound.stage.validation.errors.join("; ")}`,
+    );
+  const detailStartedAt = performance.now();
+  const detailResult = await getSemanticGateway().execute(bound.query);
+  const detailMs = elapsed(detailStartedAt);
+  const requestedLimit = bound.query.limit;
+  const complete = detailResult.data.length < requestedLimit;
+  const response = {
+    plan,
+    data: detailResult.data,
+    annotation: detailResult.annotation,
+    requestId: detailResult.requestId,
+    durationMs: parentMs + detailMs,
+    source: "Semantic Workflow → Cube → Databend",
+    workflow: {
+      exportedKeyCount: bound.values.length,
+      parentRowCount: parentResult.data.length,
+      detailRowCount: detailResult.data.length,
+      complete,
+      truncated: !complete,
+      stages: [
+        {
+          id: parentStage.id,
+          rowCount: parentResult.data.length,
+          durationMs: parentMs,
+        },
+        {
+          id: bound.stage.id,
+          rowCount: detailResult.data.length,
+          durationMs: detailMs,
+        },
+      ],
+    },
+    timings: {
+      queryMs: parentMs + detailMs,
+      workflowStages: {
+        [parentStage.id]: parentMs,
+        [bound.stage.id]: detailMs,
+      },
+    },
+  };
+  response.plan.resultMetadata = { workflow: response.workflow };
+  response.summary = await timedSummary(question, plan, response);
+  return response;
+}
 
 app.get("*splat", (_req, res) =>
   res.sendFile(path.join(__dirname, "..", "public", "index.html")),

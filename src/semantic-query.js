@@ -25,7 +25,7 @@ const MAX_TIME_DIMENSIONS = 3;
 const MAX_FILTERS = 5;
 const MAX_LIMIT = 500;
 
-function validateSemanticQuery(input, memberCatalog) {
+function validateSemanticQuery(input, memberCatalog, options = {}) {
   if (!input || typeof input !== "object" || Array.isArray(input))
     throw new Error("Cube query must be an object");
   const members = new Map(
@@ -34,12 +34,12 @@ function validateSemanticQuery(input, memberCatalog) {
   const measures = uniqueStrings(
     input.measures || [],
     "measures",
-    MAX_MEASURES,
+    options.maxMeasures || MAX_MEASURES,
   );
   const dimensions = uniqueStrings(
     input.dimensions || [],
     "dimensions",
-    MAX_DIMENSIONS,
+    options.maxDimensions || MAX_DIMENSIONS,
   );
   const ungrouped = input.ungrouped === true;
   if (input.ungrouped != null && typeof input.ungrouped !== "boolean")
@@ -76,7 +76,7 @@ function validateSemanticQuery(input, memberCatalog) {
     );
 
   const filters = (input.filters || []).map((filter) =>
-    validateFilter(filter, members),
+    validateFilter(filter, members, options),
   );
   if (filters.length > MAX_FILTERS)
     throw new Error(`At most ${MAX_FILTERS} filters are allowed`);
@@ -106,6 +106,9 @@ function validateSemanticQuery(input, memberCatalog) {
   if (!Number.isInteger(requestedLimit) || requestedLimit < 1)
     throw new Error("limit must be a positive integer");
 
+  const maximumLimit = ungrouped
+    ? options.maxUngroupedLimit || 100
+    : options.maxLimit || MAX_LIMIT;
   return compact({
     measures,
     dimensions: dimensions.length ? dimensions : undefined,
@@ -113,13 +116,13 @@ function validateSemanticQuery(input, memberCatalog) {
     filters: filters.length ? filters : undefined,
     segments: segments.length ? segments : undefined,
     order: Object.keys(order).length ? order : undefined,
-    limit: Math.min(requestedLimit, ungrouped ? 100 : MAX_LIMIT),
+    limit: Math.min(requestedLimit, maximumLimit),
     ungrouped: ungrouped || undefined,
     timezone: "UTC",
   });
 }
 
-function validateFilter(filter, members) {
+function validateFilter(filter, members, options = {}) {
   if (!filter || typeof filter !== "object" || Array.isArray(filter))
     throw new Error("filters entries must be objects");
   const member = requireMember(members, filter.member, [
@@ -134,7 +137,7 @@ function validateFilter(filter, members) {
     : uniqueStrings(
         filter.values || [],
         `filter values for ${filter.member}`,
-        20,
+        options.maxFilterValues || 20,
       );
   if (!noValues && !values.length)
     throw new Error(`Filter ${filter.member} requires values`);

@@ -55,6 +55,7 @@ function createObservation({ operation, request, plan, response, error }) {
           }
         : undefined,
     cubeQuery: plan?.cubeQuery,
+    workflow: plan?.workflow,
     semanticGateway: plan?.semanticGateway,
     sql: plan?.sql,
     sqlValues: plan?.sqlValues,
@@ -74,6 +75,7 @@ function createObservation({ operation, request, plan, response, error }) {
             ? response.data.length
             : undefined,
           summary: response.summary,
+          workflow: response.workflow,
         }
       : undefined,
     error: error ? error.message || String(error) : undefined,
