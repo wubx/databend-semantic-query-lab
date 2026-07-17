@@ -20,6 +20,15 @@ const elements = Object.fromEntries(
     "summary",
     "queryPage",
     "semanticPage",
+    "evolutionPage",
+    "evolutionStats",
+    "refreshEvolution",
+    "evolutionIssues",
+    "evolutionHeading",
+    "evolutionStatus",
+    "evolutionDetail",
+    "analyzeEvolution",
+    "evolutionProposal",
     "observabilityPage",
     "logStats",
     "logSearch",
@@ -101,6 +110,8 @@ let generatedDraftState = new Map();
 let certifiedSqlAssets = [];
 let selectedCertifiedSqlId = null;
 let certifiedSqlPublishEnabled = false;
+let evolutionIssues = [];
+let selectedEvolutionIssueId = null;
 
 boot();
 
@@ -178,6 +189,12 @@ async function boot() {
     "click",
     deleteCurrentCertifiedSql,
   );
+  elements.refreshEvolution.addEventListener("click", loadEvolutionIssues);
+  elements.evolutionIssues.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-evolution-issue]");
+    if (button) selectEvolutionIssue(button.dataset.evolutionIssue);
+  });
+  elements.analyzeEvolution.addEventListener("click", analyzeSelectedEvolution);
   elements.refreshLogs.addEventListener("click", loadQueryLogs);
   elements.logOriginFilter.addEventListener("change", loadQueryLogs);
   elements.logStatusFilter.addEventListener("change", loadQueryLogs);
@@ -773,11 +790,116 @@ function showPage(page) {
     );
   elements.queryPage.classList.toggle("active", page === "query");
   elements.semanticPage.classList.toggle("active", page === "semantic");
+  elements.evolutionPage.classList.toggle("active", page === "evolution");
   elements.observabilityPage.classList.toggle(
     "active",
     page === "observability",
   );
+  if (page === "evolution") loadEvolutionIssues();
   if (page === "observability") loadQueryLogs();
+}
+
+async function loadEvolutionIssues() {
+  elements.refreshEvolution.disabled = true;
+  try {
+    const response = await api("/api/semantic-evolution/issues");
+    evolutionIssues = response.issues;
+    const stats = response.stats;
+    elements.evolutionStats.innerHTML = [
+      [stats.rejectedRecords, "拒绝记录"],
+      [stats.issueCount, "聚合待办"],
+      [stats.repeatedIssues, "重复缺口"],
+      [stats.categories["semantic-gap"] || 0, "缺少成员"],
+      [stats.categories["grain-mismatch"] || 0, "粒度冲突"],
+    ]
+      .map(
+        ([value, label]) =>
+          `<div><strong>${value}</strong><span>${label}</span></div>`,
+      )
+      .join("");
+    elements.evolutionIssues.innerHTML = evolutionIssues.length
+      ? evolutionIssues.map(renderEvolutionIssue).join("")
+      : '<div class="empty">暂无不支持问题。查询被拒绝后会自动进入这里。</div>';
+    if (
+      selectedEvolutionIssueId &&
+      evolutionIssues.some((item) => item.id === selectedEvolutionIssueId)
+    )
+      selectEvolutionIssue(selectedEvolutionIssueId);
+  } catch (error) {
+    elements.evolutionIssues.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+  } finally {
+    elements.refreshEvolution.disabled = false;
+  }
+}
+
+function renderEvolutionIssue(issue) {
+  return `<button class="evolution-issue ${issue.id === selectedEvolutionIssueId ? "active" : ""}" data-evolution-issue="${escapeHtml(issue.id)}"><span>${escapeHtml(evolutionCategoryLabel(issue.category))}</span><strong>${escapeHtml(issue.questions[0] || "无问题文本")}</strong><small>${issue.count} 次 · ${escapeHtml((issue.affectedEntities || []).join("、") || "未识别实体")}</small></button>`;
+}
+
+function selectEvolutionIssue(issueId) {
+  const issue = evolutionIssues.find((item) => item.id === issueId);
+  if (!issue) return;
+  selectedEvolutionIssueId = issueId;
+  elements.evolutionIssues.innerHTML = evolutionIssues
+    .map(renderEvolutionIssue)
+    .join("");
+  elements.evolutionHeading.textContent = issue.questions[0] || "语义缺口";
+  elements.evolutionStatus.textContent = `${evolutionCategoryLabel(issue.category)} · ${issue.count} 次`;
+  elements.evolutionDetail.className = "";
+  elements.evolutionDetail.innerHTML = `<div class="evolution-diagnostics"><div><span>代表问题</span><p>${issue.questions.map(escapeHtml).join("<br>")}</p></div><div><span>拒绝原因</span><p>${issue.reasons.map(escapeHtml).join("<br>")}</p></div><div><span>缺失成员</span><code>${escapeHtml(issue.missingMembers.join("、") || "-")}</code></div><div><span>涉及实体</span><code>${escapeHtml(issue.affectedEntities.join("、") || "-")}</code></div><div><span>候选 YAML</span><code>${escapeHtml(issue.yamlCandidates.join("\n") || "-")}</code></div><div><span>已有建议</span><p>${issue.suggestedActions.map(escapeHtml).join("<br>") || "-"}</p></div></div>`;
+  elements.analyzeEvolution.disabled = false;
+  elements.evolutionProposal.classList.add("hidden");
+  elements.evolutionProposal.innerHTML = "";
+}
+
+async function analyzeSelectedEvolution() {
+  if (!selectedEvolutionIssueId) return;
+  elements.analyzeEvolution.disabled = true;
+  elements.analyzeEvolution.textContent = "LLM 分析中…";
+  elements.evolutionStatus.textContent = "Analyzing";
+  try {
+    const response = await api("/api/semantic-evolution/analyze", {
+      method: "POST",
+      body: JSON.stringify({ issueId: selectedEvolutionIssueId }),
+    });
+    renderEvolutionProposal(response.proposal);
+    elements.evolutionStatus.textContent = "Review required";
+  } catch (error) {
+    elements.evolutionProposal.className = "error";
+    elements.evolutionProposal.textContent = error.message;
+  } finally {
+    elements.analyzeEvolution.disabled = false;
+    elements.analyzeEvolution.textContent = "重新分析";
+  }
+}
+
+function renderEvolutionProposal(proposal) {
+  const list = (title, values) =>
+    values?.length
+      ? `<section><strong>${title}</strong><ul>${values.map((value) => `<li>${escapeHtml(value)}</li>`).join("")}</ul></section>`
+      : "";
+  const drafts = (proposal.yamlDrafts || [])
+    .map(
+      (draft) =>
+        `<details><summary>${escapeHtml(draft.path)}</summary><pre class="code">${escapeHtml(draft.content)}</pre></details>`,
+    )
+    .join("");
+  elements.evolutionProposal.className = "evolution-proposal";
+  elements.evolutionProposal.innerHTML = `<div class="evolution-warning">LLM 维护建议，仅供人工审核，不会自动修改或发布语义模型。</div><h3>${escapeHtml(proposal.summary || "语义维护建议")}</h3><div class="log-detail-grid"><div><span>建议类型</span><code>${escapeHtml(proposal.proposalType || "-")}</code></div><div><span>分析粒度</span><code>${escapeHtml(proposal.grain || "-")}</code></div></div><section><strong>业务定义</strong><p>${escapeHtml(proposal.businessDefinition || "-")}</p></section>${list("建议新增成员", proposal.membersToAdd)}${list("建议新增关系", proposal.relationshipsToAdd)}${list("需要业务确认", proposal.reviewQuestions)}${list("风险", proposal.risks)}${list("校验计划", proposal.validationPlan)}${list("回放问题", proposal.replayQuestions)}${drafts ? `<section><strong>Draft YAML</strong>${drafts}</section>` : ""}`;
+}
+
+function evolutionCategoryLabel(value) {
+  return (
+    {
+      "semantic-gap": "缺少语义成员",
+      "grain-mismatch": "粒度冲突",
+      "relationship-gap": "缺少关系",
+      policy: "Policy",
+      ambiguous: "业务歧义",
+      "unsupported-domain": "未建模业务域",
+      unclassified: "未分类",
+    }[value] || value
+  );
 }
 
 async function loadQueryLogs() {

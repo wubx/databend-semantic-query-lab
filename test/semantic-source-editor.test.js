@@ -42,7 +42,7 @@ test("allows editing all source YAML and protects referenced entity deletion", a
     fs.readFileSync(ordersPath, "utf8"),
   );
   assert.equal(result.valid, true);
-  assert.equal(result.entities, 9);
+  assert.equal(result.entities, 10);
   await assert.rejects(
     validateSemanticSourceDeletion("entities/orders.yaml"),
     /unknown entity|unknown member/,

@@ -18,6 +18,7 @@ includes:
     - entities/part.yaml
     - entities/partsupp.yaml
     - entities/regional-shipping.yaml
+    - entities/order-shipping.yaml
   relationships: relationships.yaml
   verified_queries: verified-queries.yaml
   policy: policy.yaml

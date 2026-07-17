@@ -104,6 +104,103 @@ h2 {
   border-color: #9e3d50;
   color: #ff8da3;
 }
+.evolution-layout {
+  display: grid;
+  grid-template-columns: 390px minmax(0, 1fr);
+  gap: 18px;
+}
+.evolution-issues-card,
+.evolution-detail-card {
+  min-width: 0;
+}
+.evolution-issues {
+  display: grid;
+  gap: 8px;
+  max-height: 720px;
+  overflow: auto;
+}
+.evolution-issue {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  color: #c9d9e8;
+  background: #081827;
+  border: 1px solid #29445b;
+}
+.evolution-issue:hover,
+.evolution-issue.active {
+  border-color: #3ccdaf;
+  background: #0c2532;
+}
+.evolution-issue span {
+  color: #58dfc5;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+.evolution-issue strong {
+  line-height: 1.4;
+}
+.evolution-issue small {
+  color: #68869e;
+}
+.evolution-diagnostics {
+  display: grid;
+  gap: 12px;
+}
+.evolution-diagnostics > div {
+  padding: 12px;
+  background: #061522;
+  border: 1px solid #203b50;
+  border-radius: 9px;
+}
+.evolution-diagnostics span {
+  display: block;
+  margin-bottom: 6px;
+  color: #7796ad;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+.evolution-diagnostics p,
+.evolution-diagnostics code {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+.evolution-proposal {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #29445b;
+}
+.evolution-proposal section > strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #80a0b8;
+}
+.evolution-proposal ul {
+  margin: 0;
+  padding-left: 22px;
+  color: #c9d9e8;
+  line-height: 1.7;
+}
+.evolution-proposal details {
+  margin-top: 8px;
+}
+.evolution-proposal details summary {
+  cursor: pointer;
+  color: #58dfc5;
+}
+.evolution-warning {
+  padding: 11px;
+  color: #ffd18a;
+  background: rgba(128, 85, 25, 0.18);
+  border: 1px solid #75562c;
+  border-radius: 9px;
+}
+
 .observability-hero {
   margin-bottom: 18px;
 }
@@ -1385,6 +1482,9 @@ td {
   .semantic-hero {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .evolution-layout {
+    grid-template-columns: 1fr;
   }
   .log-controls {
     grid-template-columns: 1fr 1fr;

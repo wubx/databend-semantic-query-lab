@@ -1,0 +1,101 @@
+entity:
+  name: OrderShipping
+  title: 订单运输方式使用情况
+  description: 以订单与运输方式的组合为粒度，用于比较使用不同运输方式的订单金额分布。一张多运输方式订单会在每个使用过的运输方式下各出现一次，因此运输方式分组之间不互斥。
+  source:
+    sql: |
+      SELECT DISTINCT
+        o.o_orderkey AS order_key,
+        l.l_shipmode AS ship_mode,
+        o.o_totalprice AS order_amount
+      FROM tpch_100.orders AS o
+      INNER JOIN tpch_100.lineitem AS l ON o.o_orderkey = l.l_orderkey
+  keys:
+    primary: orderShippingKey
+  dimensions:
+    - name: orderShippingKey
+      title: 订单运输方式唯一键
+      description: 由订单编号和运输方式组成的分析粒度唯一键。
+      expr: CONCAT(CAST(order_key AS STRING), '-', ship_mode)
+      type: string
+      access: private
+    - name: orderKey
+      title: 订单编号
+      description: 使用当前运输方式的订单编号；同一订单可以对应多个运输方式。
+      expr: order_key
+      type: number
+      synonyms:
+        - 订单号
+        - order key
+        - order id
+    - name: shipMode
+      title: 运输方式
+      description: 订单中至少一条明细采用的运输方式。
+      expr: ship_mode
+      type: string
+      synonyms:
+        - 配送方式
+        - 发货方式
+        - 运输模式
+        - shipping mode
+  facts:
+    - name: orderAmount
+      title: 单笔订单记录金额
+      description: 订单粒度的 o_totalprice；在订单与运输方式组合粒度中，多运输方式订单会在多个运输方式组中出现。
+      expr: order_amount
+      type: decimal
+      synonyms:
+        - 单笔订单金额
+        - order amount
+        - order total
+  metrics:
+    - name: orderCount
+      title: 使用运输方式的去重订单数
+      description: 使用当前运输方式的去重订单数。一张多运输方式订单会同时计入多个运输方式，各组订单数不可相加为总订单数。
+      type: count
+      expr: orderShippingKey
+      synonyms:
+        - 运输方式订单数
+        - 使用该运输方式的订单数
+        - orders using shipping mode
+    - name: averageOrderAmount
+      title: 按运输方式平均订单金额
+      description: 使用当前运输方式的订单记录金额平均值。每张订单在同一运输方式下只计一次；多运输方式订单会进入多个运输方式组，因此该指标用于比较非互斥群组，不代表订单金额被唯一归属。
+      type: avg
+      expr: orderAmount
+      format: currency
+      synonyms:
+        - 平均订单金额
+        - 各运输方式平均订单金额
+        - 运输方式订单均价
+        - average order amount by shipping mode
+        - average order total
+    - name: minimumOrderAmount
+      title: 按运输方式最低订单金额
+      description: 使用当前运输方式的订单记录金额最小值；多运输方式订单可进入多个组。
+      type: min
+      expr: orderAmount
+      format: currency
+      synonyms:
+        - 最低订单金额
+        - minimum order amount
+    - name: maximumOrderAmount
+      title: 按运输方式最高订单金额
+      description: 使用当前运输方式的订单记录金额最大值；多运输方式订单可进入多个组。
+      type: max
+      expr: orderAmount
+      format: currency
+      synonyms:
+        - 最高订单金额
+        - maximum order amount
+  governance:
+    status: draft
+    owner: demo-team
+    notes:
+      - 一张订单在同一运输方式下只计一次。
+      - 多运输方式订单会同时进入多个运输方式组，分组之间不互斥。
+      - 不应对各运输方式的订单金额或订单数再次求和并解释为全局总量。
+      - 指标用于描述金额分布差异，不证明订单金额与运输方式之间存在因果关系。
+  extensions:
+    cube:
+      refresh_key: false

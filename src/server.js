@@ -40,6 +40,10 @@ const {
 } = require("./query-log");
 const { buildSemanticView } = require("./semantic-view");
 const {
+  analyzeEvolutionIssue,
+  listEvolutionIssues,
+} = require("./semantic-evolution");
+const {
   getSemanticGateway,
   semanticGatewayMode,
 } = require("./semantic-gateway");
@@ -114,6 +118,18 @@ app.get(
 
 app.get("/api/query/examples", (_req, res) =>
   res.json({ queries: listQueries() }),
+);
+
+app.get(
+  "/api/semantic-evolution/issues",
+  asyncHandler(async (_req, res) => res.json(await listEvolutionIssues())),
+);
+
+app.post(
+  "/api/semantic-evolution/analyze",
+  asyncHandler(async (req, res) => {
+    res.json(await analyzeEvolutionIssue(String(req.body?.issueId || "")));
+  }),
 );
 
 app.get("/api/semantic-model", (_req, res) => res.json(buildSemanticView()));
