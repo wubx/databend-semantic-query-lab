@@ -4,6 +4,7 @@ const { deterministicPlan, exactCertifiedPlan } = require("./router");
 const { getSemanticGateway } = require("./semantic-gateway");
 const { validateSql } = require("./sql-safety");
 const { bindWorkflowDetail } = require("./semantic-workflow");
+const { fuseWorkflowToCte } = require("./workflow-cte");
 
 async function createPlan({ question, mode = "auto", planner = "auto" }) {
   const totalStartedAt = performance.now();
@@ -93,18 +94,37 @@ async function compileWorkflowPlan(plan) {
       sqlValues: generated.values,
       validation: validateSql(generated.sql),
       semanticGateway: generated.gateway,
+      metadata: generated.metadata,
       template: stage.role === "detail",
     });
   }
   plan.workflow.stages = stages;
   plan.sqlOrigin = "cube-workflow";
   plan.semanticGateway = stages[0].semanticGateway;
-  plan.validation = {
-    valid: stages.every((stage) => stage.validation.valid),
-    errors: stages.flatMap((stage) =>
-      stage.validation.errors.map((error) => `${stage.id}: ${error}`),
-    ),
-  };
+  const fused =
+    stages[0].semanticGateway === "embedded"
+      ? fuseWorkflowToCte(plan.workflow)
+      : null;
+  if (fused) {
+    fused.validation = validateSql(fused.sql);
+    plan.workflow.execution = fused;
+    plan.sql = fused.sql;
+    plan.sqlValues = fused.sqlValues;
+    plan.sqlOrigin = "cube-workflow-cte";
+  } else {
+    plan.workflow.execution = {
+      mode: "staged-cube",
+      reason: "当前 Workflow 不满足安全 CTE 融合条件，按阶段执行 Cube Query。",
+    };
+  }
+  plan.validation = fused
+    ? fused.validation
+    : {
+        valid: stages.every((stage) => stage.validation.valid),
+        errors: stages.flatMap((stage) =>
+          stage.validation.errors.map((error) => `${stage.id}: ${error}`),
+        ),
+      };
 }
 
 async function compileBoundWorkflowDetail(plan, parentData) {

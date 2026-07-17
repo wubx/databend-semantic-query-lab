@@ -621,7 +621,50 @@ app.post(
   }),
 );
 
+async function executeFusedSemanticWorkflow(plan, question) {
+  const startedAt = performance.now();
+  const rows = await queryDatabend(plan.workflow.execution.sql);
+  const queryMs = elapsed(startedAt);
+  const detailStage = plan.workflow.stages[1];
+  const aliases = detailStage.metadata?.aliasNameToMember || {};
+  const data = rows.map((row) =>
+    Object.fromEntries(
+      Object.entries(row).map(([column, value]) => [
+        aliases[column] || column,
+        value,
+      ]),
+    ),
+  );
+  const parentLimit = plan.workflow.stages[0].query.limit;
+  const detailLimit = detailStage.query.limit;
+  const complete = data.length < detailLimit;
+  const response = {
+    plan,
+    data,
+    durationMs: queryMs,
+    source: "Semantic Workflow (Fused CTE) → Databend",
+    workflow: {
+      executionMode: "fused-cte",
+      parentRowCount: parentLimit,
+      exportedKeyCount: parentLimit,
+      detailRowCount: data.length,
+      complete,
+      truncated: !complete,
+      stages: plan.workflow.stages.map((stage) => ({
+        id: stage.id,
+        logical: true,
+      })),
+    },
+    timings: { queryMs, fusedCteMs: queryMs },
+  };
+  response.plan.resultMetadata = { workflow: response.workflow };
+  response.summary = await timedSummary(question, plan, response);
+  return response;
+}
+
 async function executeSemanticWorkflow(plan, question) {
+  if (plan.workflow.execution?.mode === "fused-cte")
+    return executeFusedSemanticWorkflow(plan, question);
   const [parentStage] = plan.workflow.stages;
   const parentStartedAt = performance.now();
   const parentResult = await getSemanticGateway().execute(parentStage.query);

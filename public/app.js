@@ -1472,6 +1472,9 @@ function formatWorkflowQueries(workflow) {
 }
 
 function formatWorkflowSql(workflow) {
+  if (workflow?.execution?.mode === "fused-cte") {
+    return `-- Physical Plan: Fused CTE · 单条 Databend SQL\n-- Logical Stages: ${workflow.execution.logicalStages}\n-- Fallback: ${workflow.execution.fallbackMode}\n-- Safety: ${workflow.execution.validation?.valid ? "passed" : "failed"}\n-- ${workflow.execution.reason}\n\n${workflow.execution.sql}`;
+  }
   const stages = workflow?.stages || [];
   if (!stages.length) return "Workflow 没有可展示的 SQL Stage。";
   return stages
@@ -1545,7 +1548,7 @@ function renderResult(response) {
   const rows = response.data || [];
   const workflow = response.workflow;
   const workflowMetrics = workflow
-    ? ` · 父记录 ${workflow.parentRowCount} · 导出 Keys ${workflow.exportedKeyCount} · 明细 ${workflow.detailRowCount} · ${workflow.complete ? "完整" : "已截断"}`
+    ? ` · ${workflow.executionMode === "fused-cte" ? "Fused CTE" : "Staged Cube"} · 父记录 ${workflow.parentRowCount} · 导出 Keys ${workflow.exportedKeyCount} · 明细 ${workflow.detailRowCount} · ${workflow.complete ? "完整" : "已截断"}`
     : "";
   elements.metrics.textContent = `${response.source} · ${response.durationMs} ms · ${rows.length} rows${workflowMetrics} · ${formatTimings(response.timings)}`;
   if (response.summary) {
