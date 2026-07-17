@@ -3,22 +3,22 @@ const assert = require("node:assert/strict");
 
 const { validateLlmPlan } = require("../src/llm");
 
-test("accepts an allowed semantic query from the LLM", () => {
-  const plan = validateLlmPlan(
-    {
-      supported: true,
-      queryId: "S2",
-      confidence: 0.93,
-      parameters: {},
-      reason: "The request asks for amount grouped by status.",
-    },
-    "每种订单状态分别贡献了多少金额？",
-    "auto",
+test("rejects a non-exact semantic certified query selected by the LLM", () => {
+  assert.throws(
+    () =>
+      validateLlmPlan(
+        {
+          supported: true,
+          queryId: "S2",
+          confidence: 0.93,
+          parameters: {},
+          reason: "The request asks for amount grouped by status.",
+        },
+        "每种订单状态分别贡献了多少金额？",
+        "auto",
+      ),
+    /dynamic Cube Query is required/,
   );
-
-  assert.equal(plan.queryId, "S2");
-  assert.equal(plan.planner, "llm");
-  assert.deepEqual(plan.cubeQuery.dimensions, ["Orders.status"]);
 });
 
 test("accepts a dynamic semantic query from the LLM", () => {

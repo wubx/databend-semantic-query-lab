@@ -17,7 +17,10 @@ async function planWithLlm(question, mode = "auto") {
   if (!VALID_MODES.has(mode)) throw new Error(`Unsupported mode: ${mode}`);
 
   const catalog = listQueries()
-    .filter((query) => mode === "auto" || query.route === mode)
+    .filter(
+      (query) =>
+        query.route === "tpch" && (mode === "auto" || query.route === mode),
+    )
     .map(({ id, route, title, description, examples, parameters }) => ({
       id,
       route,
@@ -33,10 +36,12 @@ async function planWithLlm(question, mode = "auto") {
         content: [
           "You are a strict semantic query planner for Cube and Databend.",
           "Use this priority: (1) select an exact certified query, (2) build a dynamic Cube Query from public semantic members, (3) reject.",
+          "The application has already ruled out an exact semantic certified-query match. Never select an S-prefixed semantic certified query here; build a dynamic Cube Query from public semantic members instead.",
           "For TPC-H routes, only select a certified query ID. Never generate SQL.",
           "For dynamic semantic routes, queryId must be null and cubeQuery may contain only measures, dimensions, timeDimensions, filters, segments, order, limit, and ungrouped.",
           "For raw record/detail/list requests, set ungrouped to true, omit measures, select only useful public dimensions, and set an explicit limit no greater than 100. Use ungrouped false or omit it for grouped analysis and distinct dimension-value questions.",
-          "Efficiency/效率 questions may use governed efficiency members such as delayedCount, averageTransitDays, and averageDelayDays; never calculate unmodeled ratios.",
+          "For ranking and superlative requests such as most/least/highest/lowest/最多/最少/最高/最低, order by the metric that defines the superlative and use limit 1 unless the user requests a larger top N. Return only members needed to answer the question.",
+          "Efficiency/效率 questions may use governed efficiency members such as delayedCount, averageTransitDays, and averageDelayDays; never calculate unmodeled ratios. Do not treat a request for average duration as a generic efficiency analysis when the user specifies a different ranking metric.",
           "Use segments for semantic members whose kind is filter; for example LineItem.delayedReceipt must appear in segments, not filters.",
           "Use exact member identifiers from the supplied semanticMemberCatalog.",
           "For physical row-count questions such as 多少条/记录条数/row count on LineItem, prefer LineItem.rowCount; use LineItem.count only when the user asks for governed entity count or deduplicated line-item count.",
@@ -259,6 +264,10 @@ function validateLlmPlan(result, question, mode) {
   const definition = getQuery(String(result.queryId || "").toUpperCase());
   if (!definition)
     throw new Error("AI planner selected an unknown certified query");
+  if (definition.route === "semantic")
+    throw new Error(
+      "AI planner selected a non-exact semantic certified query; a dynamic Cube Query is required",
+    );
   if (mode !== "auto" && definition.route !== mode)
     throw new Error("AI planner selected a query outside the requested mode");
 
