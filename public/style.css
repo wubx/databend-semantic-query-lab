@@ -1212,12 +1212,27 @@ td {
   gap: 8px;
   min-width: min(100%, 490px);
 }
-.semantic-stats div {
+#evolutionStats {
+  grid-template-columns: repeat(3, minmax(74px, 1fr));
+}
+.semantic-stats div,
+.semantic-stats .evolution-stat {
   padding: 13px 10px;
+  color: inherit;
   text-align: center;
   border: 1px solid #27516a;
   border-radius: 12px;
   background: rgba(4, 18, 29, 0.45);
+}
+.semantic-stats .evolution-stat:hover,
+.semantic-stats .evolution-stat.active {
+  border-color: #52e6c8;
+  background: rgba(32, 108, 101, 0.34);
+  box-shadow: 0 0 0 2px rgba(82, 230, 200, 0.08);
+}
+.semantic-stats .evolution-stat strong,
+.semantic-stats .evolution-stat span {
+  display: block;
 }
 .semantic-stats strong {
   display: block;

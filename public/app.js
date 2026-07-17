@@ -111,8 +111,10 @@ let certifiedSqlAssets = [];
 let selectedCertifiedSqlId = null;
 let certifiedSqlPublishEnabled = false;
 let evolutionIssues = [];
+let evolutionStatsData = null;
 let selectedEvolutionIssueId = null;
 let pendingEvolutionQuestion = null;
+let evolutionFilter = "all";
 
 boot();
 
@@ -191,6 +193,13 @@ async function boot() {
     deleteCurrentCertifiedSql,
   );
   elements.refreshEvolution.addEventListener("click", loadEvolutionIssues);
+  elements.evolutionStats.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-evolution-filter]");
+    if (!button) return;
+    evolutionFilter = button.dataset.evolutionFilter;
+    renderEvolutionStats();
+    renderEvolutionIssues();
+  });
   elements.evolutionIssues.addEventListener("click", (event) => {
     const button = event.target.closest("[data-evolution-issue]");
     if (button) selectEvolutionIssue(button.dataset.evolutionIssue);
@@ -811,22 +820,9 @@ async function loadEvolutionIssues() {
   try {
     const response = await api("/api/semantic-evolution/issues");
     evolutionIssues = response.issues;
-    const stats = response.stats;
-    elements.evolutionStats.innerHTML = [
-      [stats.rejectedRecords, "拒绝记录"],
-      [stats.issueCount, "聚合待办"],
-      [stats.repeatedIssues, "重复缺口"],
-      [stats.categories["semantic-gap"] || 0, "缺少成员"],
-      [stats.categories["grain-mismatch"] || 0, "粒度冲突"],
-    ]
-      .map(
-        ([value, label]) =>
-          `<div><strong>${value}</strong><span>${label}</span></div>`,
-      )
-      .join("");
-    elements.evolutionIssues.innerHTML = evolutionIssues.length
-      ? evolutionIssues.map(renderEvolutionIssue).join("")
-      : '<div class="empty">暂无不支持问题。查询被拒绝后会自动进入这里。</div>';
+    evolutionStatsData = response.stats;
+    renderEvolutionStats();
+    renderEvolutionIssues();
     if (pendingEvolutionQuestion) {
       const issue = evolutionIssues.find((item) =>
         item.questions.includes(pendingEvolutionQuestion),
@@ -844,6 +840,39 @@ async function loadEvolutionIssues() {
   } finally {
     elements.refreshEvolution.disabled = false;
   }
+}
+
+function renderEvolutionStats() {
+  if (!evolutionStatsData) return;
+  const stats = evolutionStatsData;
+  const cards = [
+    ["all", stats.issueCount, "全部待办"],
+    ["repeated", stats.repeatedIssues, "重复缺口"],
+    ["semantic-gap", stats.categories["semantic-gap"] || 0, "缺少成员"],
+    ["grain-mismatch", stats.categories["grain-mismatch"] || 0, "粒度冲突"],
+    ["ambiguous", stats.categories.ambiguous || 0, "业务歧义"],
+    ["unclassified", stats.categories.unclassified || 0, "未分类"],
+  ];
+  elements.evolutionStats.innerHTML = cards
+    .map(
+      ([filter, value, label]) =>
+        `<button class="evolution-stat ${evolutionFilter === filter ? "active" : ""}" data-evolution-filter="${filter}"><strong>${value}</strong><span>${label}</span></button>`,
+    )
+    .join("");
+}
+
+function filteredEvolutionIssues() {
+  if (evolutionFilter === "all") return evolutionIssues;
+  if (evolutionFilter === "repeated")
+    return evolutionIssues.filter((issue) => issue.count > 1);
+  return evolutionIssues.filter((issue) => issue.category === evolutionFilter);
+}
+
+function renderEvolutionIssues() {
+  const issues = filteredEvolutionIssues();
+  elements.evolutionIssues.innerHTML = issues.length
+    ? issues.map(renderEvolutionIssue).join("")
+    : '<div class="empty">当前分类没有语义缺口待办。</div>';
 }
 
 function renderEvolutionIssue(issue) {
