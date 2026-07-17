@@ -2,7 +2,7 @@
 
 一个面向 **Databend** 的 AI 驱动、可治理、可观测语义查询实验平台。语义 Query 到 Databend SQL 的编译使用 Cube Open Source Compiler；自然语言规划、认证资产、治理、安全和可观测由本项目实现。
 
-它将业务问题转换为受治理的 Cube Query 或认证 TPC-H SQL，在执行前完成成员、参数和 SQL 安全校验，然后查询 Databend 并展示真实结果。同时提供可视化语义层、模块化 YAML 维护以及从 Databend 表生成模型草稿的能力。
+它将业务问题转换为受治理的单阶段 Cube Query、多阶段 Semantic Workflow 或认证 TPC-H SQL，在执行前完成成员、阶段依赖、参数和 SQL 安全校验，然后查询 Databend 并展示真实结果。同时提供可视化语义层、模块化 YAML 维护以及从 Databend 表生成模型草稿的能力。
 
 ## 为什么使用 Databend 执行 AI / Semantic Query
 
@@ -32,42 +32,83 @@ Databend 负责承载复杂 SQL 的分析计算与真实执行
 用户 / BI / AI Agent
          │
          ▼
-Databend Semantic Query Lab
-         │
- ┌───────┼────────┐
- │       │        │
-Certified Dynamic  Free SQL
- Query    Cube     Policy
- │       │        │
- └───────┼────────┘
-         ▼
-    Cube Compiler
-         ▼
-     SQL Safety
-         ▼
-      Databend
+┌──────────────────────────────────────────────┐
+│ Databend Semantic Query Lab                  │
+│                                              │
+│ Natural Language → LLM Semantic Planner      │
+│                      │                       │
+│              Query Strategy Router           │
+└──────────────────────┼───────────────────────┘
+                       │
+       ┌───────────────┼────────────────┬─────────────────┐
+       │               │                │                 │
+       ▼               ▼                ▼                 ▼
+ Certified Query   Dynamic Cube   Semantic Workflow   Governed SQL
+ 已验证计划         单一最终粒度     多阶段语义编排       Policy 控制
+       │               │                │                 │
+       │               │        ┌───────┴────────┐        │
+       │               │        │ Stage 1        │        │
+       │               │        │ Parent Top N   │        │
+       │               │        └───────┬────────┘        │
+       │               │                │ Export Keys      │
+       │               │        ┌───────▼────────┐        │
+       │               │        │ Stage 2        │        │
+       │               │        │ Child Details  │        │
+       │               │        └───────┬────────┘        │
+       │               │                │                 │
+       └───────────────┴────────────────┘                 │
+                       │                                  │
+                       ▼                                  │
+            Cube Compiler / Cube Server                   │
+                       │                                  │
+                       ▼                                  │
+               Databend SQL + Bindings                    │
+                       │                                  │
+                       ├───────────────◀──────────────────┘
+                       ▼
+             SQL Safety / Query Budget
+                       ▼
+                    Databend
+                       ▼
+        Result + Workflow Completeness + Logs
 ```
 
 其中：
 
 - `Certified Query` 为高频、已验证问题提供稳定查询计划；
-- `Dynamic Cube` 由 LLM 从公开语义成员构造受约束的 Cube Query，包括聚合和 `ungrouped` 明细查询；
-- `Free SQL Policy` 控制用户提交的自由 SQL 是否允许进入执行链路；
-- `Cube Compiler` 将语义 Query 编译为 Databend SQL；
-- `SQL Safety` 对最终 SQL 执行确定性的只读、单语句和 Schema 边界校验；
+- `Dynamic Cube` 由 LLM 从公开语义成员构造受约束的单阶段 Cube Query，包括聚合和 `ungrouped` 明细查询；
+- `Semantic Workflow` 在单个 Cube Query 不足时编排两个受治理阶段，例如先选择父实体 Top N，再将导出的 Keys 注入第二个 Cube Query 展开子明细；
+- `Governed SQL Policy` 控制用户提交的自由 SQL 是否允许进入执行链路；
+- `Cube Compiler / Cube Server` 将每个语义 Query 阶段编译为 Databend SQL；
+- `SQL Safety / Query Budget` 对最终 SQL执行确定性的只读、单语句和 Schema 边界校验，并约束阶段数、中间 Keys 和结果规模；
 - `Databend` 负责真实数据存储与 SQL 执行。
 
 ```text
 业务问题
    │
-   ├─ 精确匹配认证查询
-   ├─ LLM 生成受约束的 Cube Query（可选）
-   └─ 确定性规则路由兜底
+   ▼
+精确认证查询匹配
    │
-   ├─ Semantic 路径：Cube 编译器 → Databend SQL
-   └─ TPC-H 路径：认证 SQL Template
+   ├─ 命中 → Certified Query / Certified SQL
    │
-   └─ SQL 安全校验 → EXPLAIN / 执行 → Databend → 结果与可观测日志
+   └─ 未命中 → LLM Semantic Planner
+                    │
+                    ├─ 单一最终粒度
+                    │    └─ Dynamic Cube Query
+                    │
+                    ├─ 父实体 Top N → 子明细展开
+                    │    └─ Semantic Workflow
+                    │         ├─ Stage 1：查询父实体并导出 Keys
+                    │         └─ Stage 2：注入 Keys 并查询完整子明细
+                    │
+                    └─ 无安全语义计划 → Reject / 确定性回退
+
+每个 Semantic Stage
+   └─ Cube Compiler / Cube Server
+        → Databend SQL
+        → SQL Safety
+        → Databend
+        → 阶段行数、耗时、完整性和可观测日志
 ```
 
 ## 主要功能
@@ -75,8 +116,9 @@ Certified Dynamic  Free SQL
 ### AI 语义查询工作台
 
 - 使用自然语言查询订单、销售额、发货、供应商和区域等 TPC-H 业务数据
-- 优先匹配认证查询，也可以动态组合受校验的 Cube Query
-- 展示查询理解、Cube Query、生成的 Databend SQL、参数和执行结果
+- 优先匹配认证查询，也可以动态组合受校验的单阶段 Cube Query
+- 支持多阶段 Semantic Workflow：先查询父实体 Top N，再将导出的 Keys 注入下一阶段并展开子明细
+- 展示查询理解、Cube Query、Workflow Stage、生成的 Databend SQL、参数、阶段耗时、完整性和执行结果
 - 支持 SQL 校验、`EXPLAIN` 和真实查询执行
 - LLM 不可用时自动回退到确定性路由
 - 默认记录规划和执行阶段的 JSONL 可观测日志
@@ -130,7 +172,20 @@ semantic/policy.yaml                # AI 与查询治理声明
 ### Embedded 模式（推荐用于本地 Demo）
 
 ```text
-Browser → Demo Server :4100 → Embedded Cube Compiler → Databend
+Browser
+   │
+   ▼
+Demo Server :4100
+   │
+   ├─ Single Semantic Query ───────────────┐
+   │                                       │
+   └─ Semantic Workflow                   │
+        ├─ Stage 1：Parent Top N           │
+        └─ Stage 2：Bound Child Details    │
+                                            ▼
+                              Embedded Cube Compiler
+                                            ▼
+                                         Databend
 ```
 
 Cube Schema Compiler 和 `DatabendQuery` SQL Dialect 直接运行在 Demo 的 Node.js 进程中，不需要另外启动 Cube Server。
@@ -138,13 +193,14 @@ Cube Schema Compiler 和 `DatabendQuery` SQL Dialect 直接运行在 Demo 的 No
 保留的能力：
 
 - Cube YAML 编译
-- Measures、Dimensions、Segments、Filters、Joins、Order、Limit 和 `ungrouped` 明细查询
+- Measures、Dimensions、Facts、Segments、Filters、Joins、Order、Limit 和 `ungrouped` 明细查询
+- 两阶段 Semantic Workflow，由 Demo Server 顺序执行多个经 Cube 编译的查询并传递受限 Key 集合
 - Databend SQL 生成及参数绑定
 - Cube 成员别名映射
 
 不包含 Cube Server 的以下运行时能力：
 
-- Query Orchestrator 和缓存
+- Cube Query Orchestrator 和缓存（Semantic Workflow 由本项目的应用层 Orchestrator 实现，不是 Cube Query Orchestrator）
 - Pre-aggregations
 - Cube Security Context 和 Access Policy Enforcement
 - Cube `/meta`、`/sql`、`/load`、SQL API 和 Playground
@@ -154,10 +210,22 @@ Cube Schema Compiler 和 `DatabendQuery` SQL Dialect 直接运行在 Demo 的 No
 ### Cube Server 模式
 
 ```text
-Browser → Demo Server :4100 → Cube Server :4000 → Databend
+Browser
+   │
+   ▼
+Demo Server :4100 / Semantic Workflow Orchestrator
+   │
+   ├─ Stage 1 Cube Query
+   └─ Stage 2 Cube Query with bound Keys
+             │
+             ▼
+      Cube Server :4000
+             │
+             ▼
+          Databend
 ```
 
-通过 Cube HTTP API 完成语义查询，适合需要完整 Cube Runtime 能力的环境。
+通过 Cube HTTP API 完成每个语义查询阶段，适合需要完整 Cube Runtime 能力的环境。多阶段 Workflow 仍由 Demo Server / Agent 层编排，Cube Server 负责执行各个受治理的 Cube Query Stage。
 
 ## 环境要求
 
