@@ -113,8 +113,8 @@ async function boot() {
     loadCertifiedSqlAssets(),
     loadModelerDatabases(),
   ]);
-  elements.plan.addEventListener("click", () => plan(false));
-  elements.run.addEventListener("click", () => plan(true));
+  elements.plan.addEventListener("click", () => startQuery(false));
+  elements.run.addEventListener("click", () => startQuery(true));
   elements.explain.addEventListener("click", explain);
   elements.executeSql.addEventListener("click", executePlannedSql);
   elements.semanticSearch.addEventListener("input", renderMembers);
@@ -1073,10 +1073,14 @@ function formatCardinality(value) {
   );
 }
 
+function startQuery(execute) {
+  resetQueryOutput();
+  clearError();
+  return plan(execute);
+}
+
 async function plan(execute) {
   setBusy(true);
-  clearError();
-  resetQueryOutput();
   try {
     const payload = {
       question: elements.question.value,
@@ -1099,12 +1103,11 @@ async function plan(execute) {
 
 function resetQueryOutput() {
   currentPlan = undefined;
-  elements.route.textContent = "等待输入";
+  elements.route.textContent = "处理中";
   elements.interpretation.className = "empty";
-  elements.interpretation.textContent =
-    "输入自然语言问题后，这里会展示路由、认证查询和参数。";
-  elements.cubeQuery.textContent = "尚未生成";
-  elements.sql.textContent = "尚未生成";
+  elements.interpretation.textContent = "正在理解问题并生成查询计划…";
+  elements.cubeQuery.textContent = "正在生成…";
+  elements.sql.textContent = "正在生成…";
   elements.validation.textContent = "未验证";
   elements.validation.style.color = "";
   elements.explain.disabled = true;
@@ -1121,7 +1124,12 @@ function resetQueryOutput() {
 function renderPlan(plan) {
   if (!plan.supported) {
     elements.route.textContent = "不支持";
+    elements.interpretation.className = "empty";
     elements.interpretation.textContent = plan.message;
+    elements.cubeQuery.textContent = "未生成：当前问题没有可信的 Cube Query。";
+    elements.sql.textContent = "未生成：查询计划被拒绝。";
+    elements.validation.textContent = "未验证";
+    elements.validation.style.color = "";
     return;
   }
   elements.interpretation.className = "";
