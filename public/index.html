@@ -23,6 +23,7 @@
               查询工作台
             </button>
             <button class="page-tab" data-page="semantic">语义层</button>
+            <button class="page-tab" data-page="observability">查询日志</button>
           </nav>
           <div id="health" class="health">正在检查服务…</div>
         </div>
@@ -111,6 +112,55 @@
             ><span id="metrics" class="badge subtle">等待执行</span>
           </div>
           <div id="result" class="empty">执行查询后显示结果。</div>
+        </section>
+      </div>
+
+      <div id="observabilityPage" class="page-view">
+        <section class="semantic-hero card observability-hero">
+          <div>
+            <p class="eyebrow">QUERY OBSERVABILITY</p>
+            <h2>查询日志</h2>
+            <p class="subtitle">
+              观察自然语言路由、Cube Query、认证 SQL、自由
+              SQL、执行结果和阶段耗时。
+            </p>
+          </div>
+          <div id="logStats" class="semantic-stats"></div>
+        </section>
+        <section class="card log-controls">
+          <input
+            id="logSearch"
+            type="search"
+            placeholder="搜索问题、Query ID、SQL 或错误…"
+          />
+          <select id="logOriginFilter">
+            <option value="">全部 SQL 来源</option>
+            <option value="cube-generated">Cube 生成</option>
+            <option value="certified-sql">认证 SQL</option>
+            <option value="free-sql">自由 SQL</option>
+          </select>
+          <select id="logStatusFilter">
+            <option value="">全部状态</option>
+            <option value="success">成功</option>
+            <option value="rejected">拒绝</option>
+            <option value="error">错误</option>
+          </select>
+          <select id="logLimit">
+            <option value="50">最近 50 条</option>
+            <option value="100" selected>最近 100 条</option>
+            <option value="200">最近 200 条</option>
+            <option value="500">最近 500 条</option>
+          </select>
+          <button id="refreshLogs" class="primary">刷新</button>
+        </section>
+        <section class="card log-table-card">
+          <div class="card-title">
+            <span>查询记录</span
+            ><span id="logMeta" class="badge subtle">等待加载</span>
+          </div>
+          <div id="logList" class="log-list">
+            <div class="empty">正在加载查询日志…</div>
+          </div>
         </section>
       </div>
 

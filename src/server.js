@@ -33,7 +33,11 @@ const {
 const { modelerLogPath, observeModelGeneration } = require("./modeler-log");
 const { createPlan } = require("./planner");
 const { loadManifest } = require("./manifest");
-const { observeQuery, queryLogPath } = require("./query-log");
+const {
+  listQueryObservations,
+  observeQuery,
+  queryLogPath,
+} = require("./query-log");
 const { buildSemanticView } = require("./semantic-view");
 const {
   getSemanticGateway,
@@ -93,6 +97,20 @@ app.get("/api/health", async (_req, res) => {
     semanticGateway: semanticGatewayMode(),
   });
 });
+
+app.get(
+  "/api/query-observability",
+  asyncHandler(async (req, res) => {
+    res.json(
+      await listQueryObservations({
+        limit: req.query.limit,
+        status: req.query.status,
+        sqlOrigin: req.query.sqlOrigin,
+        search: req.query.search,
+      }),
+    );
+  }),
+);
 
 app.get("/api/query/examples", (_req, res) =>
   res.json({ queries: listQueries() }),

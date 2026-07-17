@@ -67,6 +67,89 @@ function createObservation({ operation, request, plan, response, error }) {
   });
 }
 
+async function listQueryObservations({
+  limit = 100,
+  status,
+  sqlOrigin,
+  search,
+} = {}) {
+  const requestedLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
+  const records = await readRecentJsonLines(queryLogPath(), 2 * 1024 * 1024);
+  const normalizedSearch = String(search || "")
+    .trim()
+    .toLowerCase();
+  const filtered = records
+    .filter((item) => !status || item.status === status)
+    .filter((item) => !sqlOrigin || item.sqlOrigin === sqlOrigin)
+    .filter(
+      (item) =>
+        !normalizedSearch ||
+        [item.question, item.queryId, item.sql, item.error]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch),
+    );
+  const observations = filtered.slice(-requestedLimit).reverse();
+  return {
+    observations,
+    stats: summarizeObservations(records),
+    windowSize: records.length,
+    matched: filtered.length,
+    logFile: path.basename(queryLogPath()),
+  };
+}
+
+async function readRecentJsonLines(filePath, maxBytes) {
+  let handle;
+  try {
+    handle = await fs.open(filePath, "r");
+    const { size } = await handle.stat();
+    const length = Math.min(size, maxBytes);
+    const buffer = Buffer.alloc(length);
+    await handle.read(buffer, 0, length, size - length);
+    let text = buffer.toString("utf8");
+    if (size > length) text = text.slice(text.indexOf("\n") + 1);
+    return text
+      .split("\n")
+      .filter(Boolean)
+      .flatMap((line) => {
+        try {
+          return [JSON.parse(line)];
+        } catch {
+          return [];
+        }
+      });
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  } finally {
+    await handle?.close();
+  }
+}
+
+function summarizeObservations(records) {
+  const executed = records.filter((item) =>
+    ["execute", "execute-sql"].includes(item.operation),
+  );
+  const freeSql = records.filter(
+    (item) => item.policy?.usedAllowFreeSql === true,
+  );
+  return {
+    total: records.length,
+    executed: executed.length,
+    success: records.filter((item) => item.status === "success").length,
+    errors: records.filter((item) => item.status === "error").length,
+    rejected: records.filter((item) => item.status === "rejected").length,
+    freeSql: freeSql.length,
+    freeSqlAllowed: freeSql.filter(
+      (item) => item.policy?.decision === "allowed",
+    ).length,
+    freeSqlDenied: freeSql.filter((item) => item.policy?.decision === "denied")
+      .length,
+  };
+}
+
 async function writeQueryObservation(observation) {
   if (!isQueryLogEnabled()) return;
   const logPath = queryLogPath();
@@ -100,6 +183,7 @@ module.exports = {
   DEFAULT_LOG_PATH,
   createObservation,
   isQueryLogEnabled,
+  listQueryObservations,
   observeQuery,
   queryLogPath,
   writeQueryObservation,

@@ -70,6 +70,41 @@ test("builds an observation with question, Cube Query, SQL, and timings", () => 
   assert.equal(observation.result.rowCount, 1);
 });
 
+test("lists and summarizes recent query observations", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "query-list-"));
+  const previousPath = process.env.QUERY_LOG_PATH;
+  process.env.QUERY_LOG_PATH = path.join(directory, "queries.jsonl");
+  try {
+    await writeQueryObservation({
+      timestamp: "2026-01-01T00:00:00Z",
+      operation: "plan",
+      status: "success",
+      question: "订单总数",
+      sqlOrigin: "cube-generated",
+    });
+    await writeQueryObservation({
+      timestamp: "2026-01-01T00:01:00Z",
+      operation: "execute-sql",
+      status: "success",
+      question: "查看明细",
+      sqlOrigin: "free-sql",
+      policy: { usedAllowFreeSql: true, decision: "allowed" },
+    });
+    const { listQueryObservations } = require("../src/query-log");
+    const result = await listQueryObservations({ sqlOrigin: "free-sql" });
+    assert.equal(result.observations.length, 1);
+    assert.equal(result.observations[0].question, "查看明细");
+    assert.equal(result.stats.total, 2);
+    assert.equal(result.stats.freeSqlAllowed, 1);
+    assert.equal(result.logFile, "queries.jsonl");
+    assert.equal(result.path, undefined);
+  } finally {
+    if (previousPath === undefined) delete process.env.QUERY_LOG_PATH;
+    else process.env.QUERY_LOG_PATH = previousPath;
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("marks user-supplied SQL as an allow_free_sql policy event", () => {
   const observation = createObservation({
     operation: "execute-sql",

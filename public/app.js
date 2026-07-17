@@ -20,6 +20,15 @@ const elements = Object.fromEntries(
     "summary",
     "queryPage",
     "semanticPage",
+    "observabilityPage",
+    "logStats",
+    "logSearch",
+    "logOriginFilter",
+    "logStatusFilter",
+    "logLimit",
+    "refreshLogs",
+    "logMeta",
+    "logList",
     "semanticDescription",
     "semanticStats",
     "semanticSearch",
@@ -169,6 +178,20 @@ async function boot() {
     "click",
     deleteCurrentCertifiedSql,
   );
+  elements.refreshLogs.addEventListener("click", loadQueryLogs);
+  elements.logOriginFilter.addEventListener("change", loadQueryLogs);
+  elements.logStatusFilter.addEventListener("change", loadQueryLogs);
+  elements.logLimit.addEventListener("change", loadQueryLogs);
+  elements.logSearch.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") loadQueryLogs();
+  });
+  elements.logList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-reuse-question]");
+    if (!button) return;
+    elements.question.value = button.dataset.reuseQuestion;
+    showPage("query");
+    elements.question.focus();
+  });
   document
     .querySelectorAll("[data-page]")
     .forEach((tab) =>
@@ -750,6 +773,76 @@ function showPage(page) {
     );
   elements.queryPage.classList.toggle("active", page === "query");
   elements.semanticPage.classList.toggle("active", page === "semantic");
+  elements.observabilityPage.classList.toggle(
+    "active",
+    page === "observability",
+  );
+  if (page === "observability") loadQueryLogs();
+}
+
+async function loadQueryLogs() {
+  elements.refreshLogs.disabled = true;
+  const parameters = new URLSearchParams({ limit: elements.logLimit.value });
+  if (elements.logStatusFilter.value)
+    parameters.set("status", elements.logStatusFilter.value);
+  if (elements.logOriginFilter.value)
+    parameters.set("sqlOrigin", elements.logOriginFilter.value);
+  if (elements.logSearch.value.trim())
+    parameters.set("search", elements.logSearch.value.trim());
+  try {
+    const response = await api(`/api/query-observability?${parameters}`);
+    const stats = response.stats;
+    elements.logStats.innerHTML = [
+      [stats.total, "日志"],
+      [stats.executed, "执行"],
+      [stats.errors + stats.rejected, "异常/拒绝"],
+      [stats.freeSqlAllowed, "自由 SQL"],
+      [stats.freeSqlDenied, "策略拒绝"],
+    ]
+      .map(
+        ([value, label]) =>
+          `<div><strong>${value}</strong><span>${label}</span></div>`,
+      )
+      .join("");
+    elements.logMeta.textContent = `${response.matched} 条匹配 · 最近窗口 ${response.windowSize} 条`;
+    elements.logList.innerHTML = response.observations.length
+      ? response.observations.map(renderLogRecord).join("")
+      : '<div class="empty">没有匹配的查询日志。</div>';
+  } catch (error) {
+    elements.logList.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+  } finally {
+    elements.refreshLogs.disabled = false;
+  }
+}
+
+function renderLogRecord(item) {
+  const originLabels = {
+    "cube-generated": "Cube 生成",
+    "certified-sql": "认证 SQL",
+    "free-sql": "自由 SQL",
+  };
+  const policy = item.policy?.usedAllowFreeSql
+    ? `<span class="log-policy ${item.policy.decision}">allow_free_sql · ${escapeHtml(item.policy.decision)}</span>`
+    : "";
+  const details = [
+    item.operation,
+    item.queryId,
+    item.planner,
+    item.result?.rowCount !== undefined ? `${item.result.rowCount} rows` : null,
+    item.timings?.totalRequestMs !== undefined
+      ? `${item.timings.totalRequestMs} ms`
+      : item.timings?.totalMs !== undefined
+        ? `${item.timings.totalMs} ms`
+        : null,
+  ].filter(Boolean);
+  return `<details class="log-record ${escapeHtml(item.status)}"><summary><span class="log-status-dot"></span><div class="log-question"><strong>${escapeHtml(item.question || "无自然语言问题")}</strong><small>${escapeHtml(details.join(" · "))}</small></div><span class="log-origin">${escapeHtml(originLabels[item.sqlOrigin] || item.route || "未分类")}</span>${policy}<time>${escapeHtml(formatLogTime(item.timestamp))}</time></summary><div class="log-detail"><div class="log-detail-grid"><div><span>Request ID</span><code>${escapeHtml(item.requestId)}</code></div><div><span>查询理解</span><code>${escapeHtml(item.queryUnderstanding?.method || item.strategy || "-")}</code></div><div><span>状态</span><code>${escapeHtml(item.status)}</code></div><div><span>SQL 来源</span><code>${escapeHtml(item.sqlOrigin || "-")}</code></div></div>${item.cubeQuery ? `<section><strong>Cube Query</strong><pre class="code">${escapeHtml(JSON.stringify(item.cubeQuery, null, 2))}</pre></section>` : ""}${item.sql ? `<section><strong>SQL</strong><pre class="code">${escapeHtml(item.sql)}</pre></section>` : ""}${item.error ? `<p class="error">${escapeHtml(item.error)}</p>` : ""}${item.question ? `<button class="tiny" data-reuse-question="${escapeHtml(item.question)}">再次提问</button>` : ""}</div></details>`;
+}
+
+function formatLogTime(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? String(value || "")
+    : date.toLocaleString("zh-CN", { hour12: false });
 }
 
 async function loadHealth() {
