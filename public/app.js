@@ -816,6 +816,29 @@ async function loadQueryLogs() {
   }
 }
 
+function renderRejectionMaintenance(rejection) {
+  if (!rejection) return "";
+  const categoryLabels = {
+    "semantic-gap": "缺少语义成员",
+    "grain-mismatch": "分析粒度不一致",
+    "relationship-gap": "缺少实体关系",
+    policy: "治理策略拒绝",
+    ambiguous: "业务含义不明确",
+    "unsupported-domain": "未建模业务域",
+    unclassified: "尚未分类",
+  };
+  const rows = [
+    ["分类", categoryLabels[rejection.category] || rejection.category],
+    ["涉及实体", (rejection.affectedEntities || []).join("、")],
+    ["缺失成员", (rejection.missingMembers || []).join("、")],
+    ["建议检查 YAML", (rejection.yamlCandidates || []).join("、")],
+    ["建议动作", (rejection.suggestedActions || []).join("；")],
+  ].filter(([, value]) => value);
+  return rows.length
+    ? `<div class="maintenance-hints">${rows.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><code>${escapeHtml(value)}</code></div>`).join("")}</div>`
+    : "";
+}
+
 function renderLogRecord(item) {
   const originLabels = {
     "cube-generated": "Cube 生成",
@@ -843,7 +866,7 @@ function renderLogRecord(item) {
         ? `${item.timings.totalMs} ms`
         : null,
   ].filter(Boolean);
-  return `<details class="log-record ${escapeHtml(item.status)}"><summary><span class="log-status-dot"></span><div class="log-question"><strong>${escapeHtml(item.question || "无自然语言问题")}</strong><small>${escapeHtml(details.join(" · "))}</small></div><span class="log-origin">${escapeHtml(originLabels[item.sqlOrigin] || item.route || "未分类")}</span>${fallback}${rejectionBadge}${policy}<time>${escapeHtml(formatLogTime(item.timestamp))}</time></summary><div class="log-detail"><div class="log-detail-grid"><div><span>Request ID</span><code>${escapeHtml(item.requestId)}</code></div><div><span>查询理解</span><code>${escapeHtml(item.queryUnderstanding?.method || item.strategy || "-")}</code></div><div><span>状态</span><code>${escapeHtml(item.status)}</code></div><div><span>SQL 来源</span><code>${escapeHtml(item.sqlOrigin || "-")}</code></div></div>${rejection ? `<section class="rejection-detail"><strong>不支持原因</strong><div class="fallback-message rejection-message"><b>查询无法映射到可信计划</b><span>来源：${escapeHtml(item.rejection?.source || item.planner || "planner")}</span><p>${escapeHtml(rejection)}</p></div></section>` : ""}${item.fallback?.reason ? `<section class="fallback-detail"><strong>降级原因</strong><div class="fallback-message"><b>${escapeHtml(fallbackLabel(item.fallback.reason))}</b><span>来源：${escapeHtml(item.fallback.from || "未知")}</span><code>${escapeHtml(item.fallback.reason)}</code></div></section>` : ""}${item.cubeQuery ? `<section><strong>Cube Query</strong><pre class="code">${escapeHtml(JSON.stringify(item.cubeQuery, null, 2))}</pre></section>` : ""}${item.sql ? `<section><strong>SQL</strong><pre class="code">${escapeHtml(item.sql)}</pre></section>` : ""}${item.error ? `<p class="error">${escapeHtml(item.error)}</p>` : ""}${item.question ? `<button class="tiny" data-reuse-question="${escapeHtml(item.question)}">再次提问</button>` : ""}</div></details>`;
+  return `<details class="log-record ${escapeHtml(item.status)}"><summary><span class="log-status-dot"></span><div class="log-question"><strong>${escapeHtml(item.question || "无自然语言问题")}</strong><small>${escapeHtml(details.join(" · "))}</small></div><span class="log-origin">${escapeHtml(originLabels[item.sqlOrigin] || item.route || "未分类")}</span>${fallback}${rejectionBadge}${policy}<time>${escapeHtml(formatLogTime(item.timestamp))}</time></summary><div class="log-detail"><div class="log-detail-grid"><div><span>Request ID</span><code>${escapeHtml(item.requestId)}</code></div><div><span>查询理解</span><code>${escapeHtml(item.queryUnderstanding?.method || item.strategy || "-")}</code></div><div><span>状态</span><code>${escapeHtml(item.status)}</code></div><div><span>SQL 来源</span><code>${escapeHtml(item.sqlOrigin || "-")}</code></div></div>${rejection ? `<section class="rejection-detail"><strong>不支持原因</strong><div class="fallback-message rejection-message"><b>查询无法映射到可信计划</b><span>来源：${escapeHtml(item.rejection?.source || item.planner || "planner")}</span><p>${escapeHtml(rejection)}</p>${renderRejectionMaintenance(item.rejection)}</div></section>` : ""}${item.fallback?.reason ? `<section class="fallback-detail"><strong>降级原因</strong><div class="fallback-message"><b>${escapeHtml(fallbackLabel(item.fallback.reason))}</b><span>来源：${escapeHtml(item.fallback.from || "未知")}</span><code>${escapeHtml(item.fallback.reason)}</code></div></section>` : ""}${item.cubeQuery ? `<section><strong>Cube Query</strong><pre class="code">${escapeHtml(JSON.stringify(item.cubeQuery, null, 2))}</pre></section>` : ""}${item.sql ? `<section><strong>SQL</strong><pre class="code">${escapeHtml(item.sql)}</pre></section>` : ""}${item.error ? `<p class="error">${escapeHtml(item.error)}</p>` : ""}${item.question ? `<button class="tiny" data-reuse-question="${escapeHtml(item.question)}">再次提问</button>` : ""}</div></details>`;
 }
 
 function isTimeoutFallback(reason) {

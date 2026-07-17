@@ -47,6 +47,11 @@ function createObservation({ operation, request, plan, response, error }) {
             message: plan.message,
             reason: plan.reason || plan.message,
             source: plan.planner || plan.queryUnderstanding?.method,
+            category: plan.rejectionDiagnostics?.category || "unclassified",
+            missingMembers: plan.rejectionDiagnostics?.missingMembers || [],
+            affectedEntities: plan.rejectionDiagnostics?.affectedEntities || [],
+            suggestedActions: plan.rejectionDiagnostics?.suggestedActions || [],
+            yamlCandidates: yamlCandidates(plan.rejectionDiagnostics),
           }
         : undefined,
     cubeQuery: plan?.cubeQuery,
@@ -99,6 +104,10 @@ async function listQueryObservations({
           item.error,
           item.rejection?.message,
           item.rejection?.reason,
+          item.rejection?.category,
+          ...(item.rejection?.missingMembers || []),
+          ...(item.rejection?.affectedEntities || []),
+          ...(item.rejection?.suggestedActions || []),
           item.fallback?.from,
           item.fallback?.reason,
         ]
@@ -170,6 +179,22 @@ function summarizeObservations(records) {
     freeSqlDenied: freeSql.filter((item) => item.policy?.decision === "denied")
       .length,
   };
+}
+
+function yamlCandidates(diagnostics) {
+  if (!diagnostics) return [];
+  const files = (diagnostics.affectedEntities || []).flatMap((entity) => {
+    const normalized = String(entity)
+      .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+      .replace(/[^A-Za-z0-9-]/g, "-")
+      .toLowerCase();
+    return normalized ? [`semantic/entities/${normalized}.yaml`] : [];
+  });
+  if (diagnostics.category === "relationship-gap")
+    files.push("semantic/relationships.yaml");
+  if (diagnostics.category === "policy") files.push("semantic/policy.yaml");
+  files.push("semantic/verified-queries.yaml");
+  return [...new Set(files)];
 }
 
 function isTimeoutReason(reason) {

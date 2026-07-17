@@ -38,6 +38,18 @@ function buildReport(observations) {
       records.filter((item) => item.status === "rejected"),
       (item) => item.question || "(empty)",
     ),
+    semanticMaintenance: records
+      .filter((item) => item.status === "rejected")
+      .map((item) => ({
+        timestamp: item.timestamp,
+        question: item.question,
+        category: item.rejection?.category || "unclassified",
+        reason: item.rejection?.reason || item.rejection?.message,
+        missingMembers: item.rejection?.missingMembers || [],
+        affectedEntities: item.rejection?.affectedEntities || [],
+        suggestedActions: item.rejection?.suggestedActions || [],
+        yamlCandidates: item.rejection?.yamlCandidates || [],
+      })),
   };
 }
 

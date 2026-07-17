@@ -205,6 +205,25 @@ h2 {
   border-color: #91465a;
   background: rgba(126, 38, 59, 0.18);
 }
+.maintenance-hints {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(145, 70, 90, 0.5);
+}
+.maintenance-hints div {
+  display: grid;
+  grid-template-columns: 95px minmax(0, 1fr);
+  gap: 8px;
+}
+.maintenance-hints span {
+  color: #88a2b9;
+  font-size: 10px;
+}
+.maintenance-hints code {
+  color: #d7e6f3;
+}
 .log-record time {
   color: #607e96;
   font-size: 10px;

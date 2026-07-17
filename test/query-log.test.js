@@ -79,6 +79,12 @@ test("records the reason a planner rejects an unsupported question", () => {
       planner: "llm",
       reason: "订单金额与运输方式粒度不一致，直接汇总可能重复计算。",
       message: "无法准确回答这个问题。",
+      rejectionDiagnostics: {
+        category: "grain-mismatch",
+        missingMembers: ["OrderShipping.averageOrderAmount"],
+        affectedEntities: ["Orders", "LineItem"],
+        suggestedActions: ["定义订单到运输方式的唯一归属或金额分摊口径"],
+      },
       queryUnderstanding: { llmUsed: true, method: "llm" },
     },
   });
@@ -88,6 +94,15 @@ test("records the reason a planner rejects an unsupported question", () => {
     message: "无法准确回答这个问题。",
     reason: "订单金额与运输方式粒度不一致，直接汇总可能重复计算。",
     source: "llm",
+    category: "grain-mismatch",
+    missingMembers: ["OrderShipping.averageOrderAmount"],
+    affectedEntities: ["Orders", "LineItem"],
+    suggestedActions: ["定义订单到运输方式的唯一归属或金额分摊口径"],
+    yamlCandidates: [
+      "semantic/entities/orders.yaml",
+      "semantic/entities/line-item.yaml",
+      "semantic/verified-queries.yaml",
+    ],
   });
 });
 

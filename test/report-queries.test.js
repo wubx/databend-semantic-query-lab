@@ -28,6 +28,14 @@ test("calculates query observability rates and latency percentiles", () => {
       status: "rejected",
       question: "delete everything",
       queryUnderstanding: { llmUsed: true },
+      rejection: {
+        category: "semantic-gap",
+        reason: "missing governed salary measure",
+        missingMembers: ["Employee.salary"],
+        affectedEntities: ["Employee"],
+        suggestedActions: ["add a governed salary metric"],
+        yamlCandidates: ["semantic/entities/employee.yaml"],
+      },
       timings: { totalMs: 500 },
     },
   ]);
@@ -38,6 +46,18 @@ test("calculates query observability rates and latency percentiles", () => {
   assert.deepEqual(report.executionGateways, { cube: 2 });
   assert.equal(report.latencyMs.planning.p95, 1000);
   assert.deepEqual(report.unsupportedQuestions, { "delete everything": 1 });
+  assert.deepEqual(report.semanticMaintenance, [
+    {
+      timestamp: undefined,
+      question: "delete everything",
+      category: "semantic-gap",
+      reason: "missing governed salary measure",
+      missingMembers: ["Employee.salary"],
+      affectedEntities: ["Employee"],
+      suggestedActions: ["add a governed salary metric"],
+      yamlCandidates: ["semantic/entities/employee.yaml"],
+    },
+  ]);
 });
 
 test("calculates nearest-rank percentiles", () => {

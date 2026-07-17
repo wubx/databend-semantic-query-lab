@@ -39,13 +39,14 @@ async function planWithLlm(question, mode = "auto") {
           "Efficiency/效率 questions may use governed efficiency members such as delayedCount, averageTransitDays, and averageDelayDays; never calculate unmodeled ratios.",
           "Use segments for semantic members whose kind is filter; for example LineItem.delayedReceipt must appear in segments, not filters.",
           "Use exact member identifiers from the supplied semanticMemberCatalog.",
-        "For physical row-count questions such as 多少条/记录条数/row count on LineItem, prefer LineItem.rowCount; use LineItem.count only when the user asks for governed entity count or deduplicated line-item count.",
+          "For physical row-count questions such as 多少条/记录条数/row count on LineItem, prefer LineItem.rowCount; use LineItem.count only when the user asks for governed entity count or deduplicated line-item count.",
           "Allowed granularities: year, quarter, month, week, day.",
           "Allowed filter operators: equals, notEquals, contains, startsWith, gt, gte, lt, lte, inDateRange, notInDateRange, set, notSet.",
           "Never invent a metric. Interpret generic sales/销售情况/销售额 as Orders.totalPrice only when that modeled metric fits the question.",
           "For certified Q6, extract only startDate, endDate, discountMin, discountMax, and quantity. Percentages must be decimals.",
+          "When rejecting, provide actionable maintenance diagnostics: rejectionCategory, missingMembers, affectedEntities, and suggestedActions. Use rejectionCategory semantic-gap for missing metrics/dimensions, grain-mismatch for unsafe cross-grain analysis, relationship-gap for missing joins, policy for governed denial, ambiguous for unclear business meaning, or unsupported-domain.",
           "Return JSON only with this shape:",
-          '{"supported":boolean,"strategy":"certified|dynamic|reject","queryId":string|null,"confidence":number,"parameters":object,"cubeQuery":{"measures":string[],"dimensions":string[],"timeDimensions":object[],"filters":object[],"segments":string[],"order":object,"limit":number,"ungrouped":boolean}|null,"reason":string}',
+          '{"supported":boolean,"strategy":"certified|dynamic|reject","queryId":string|null,"confidence":number,"parameters":object,"cubeQuery":{"measures":string[],"dimensions":string[],"timeDimensions":object[],"filters":object[],"segments":string[],"order":object,"limit":number,"ungrouped":boolean}|null,"reason":string,"rejectionCategory":string|null,"missingMembers":string[],"affectedEntities":string[],"suggestedActions":string[]}',
         ].join("\n"),
       },
       {
@@ -222,6 +223,8 @@ function validateLlmPlan(result, question, mode) {
       question,
       mode,
       planner: "llm",
+      reason: result.reason,
+      rejectionDiagnostics: normalizeRejectionDiagnostics(result),
       message:
         result.reason ||
         "AI planner could not map this request to a certified query.",
@@ -279,6 +282,38 @@ function validateLlmPlan(result, question, mode) {
     parameters,
     cubeQuery: definition.cubeQuery,
   };
+}
+
+function normalizeRejectionDiagnostics(result) {
+  const allowedCategories = new Set([
+    "semantic-gap",
+    "grain-mismatch",
+    "relationship-gap",
+    "policy",
+    "ambiguous",
+    "unsupported-domain",
+  ]);
+  return {
+    category: allowedCategories.has(result.rejectionCategory)
+      ? result.rejectionCategory
+      : "unclassified",
+    missingMembers: uniqueDiagnosticStrings(result.missingMembers),
+    affectedEntities: uniqueDiagnosticStrings(result.affectedEntities),
+    suggestedActions: uniqueDiagnosticStrings(result.suggestedActions),
+  };
+}
+
+function uniqueDiagnosticStrings(values) {
+  return Array.isArray(values)
+    ? [
+        ...new Set(
+          values
+            .map(String)
+            .map((value) => value.trim())
+            .filter(Boolean),
+        ),
+      ].slice(0, 10)
+    : [];
 }
 
 function validateQ6Parameters(parameters) {
