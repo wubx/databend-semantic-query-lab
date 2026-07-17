@@ -9,7 +9,6 @@ queries:
       - 执行 TPC-H Q1
       - 运行 Q1 定价汇总报表
       - TPC-H Q1
-    template: templates/q1.sql
     parameters:
       days:
         type: integer
@@ -20,7 +19,7 @@ queries:
     governance:
       owner: demo-team
       verified_by: demo-team
-
+    template: templates/q1.sql
   - id: Q6
     title: TPC-H Q6 收入变化预测
     description: 使用可控折扣范围、数量和日期参数计算折扣收入。
@@ -62,7 +61,6 @@ queries:
     governance:
       owner: demo-team
       verified_by: demo-team
-
   - id: Q21
     title: TPC-H Q21 等待订单供应商
     description: 使用 EXISTS 和 NOT EXISTS 查询导致已完成订单等待的供应商。

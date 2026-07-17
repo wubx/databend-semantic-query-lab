@@ -39,6 +39,7 @@ async function planWithLlm(question, mode = "auto") {
           "Efficiency/效率 questions may use governed efficiency members such as delayedCount, averageTransitDays, and averageDelayDays; never calculate unmodeled ratios.",
           "Use segments for semantic members whose kind is filter; for example LineItem.delayedReceipt must appear in segments, not filters.",
           "Use exact member identifiers from the supplied semanticMemberCatalog.",
+        "For physical row-count questions such as 多少条/记录条数/row count on LineItem, prefer LineItem.rowCount; use LineItem.count only when the user asks for governed entity count or deduplicated line-item count.",
           "Allowed granularities: year, quarter, month, week, day.",
           "Allowed filter operators: equals, notEquals, contains, startsWith, gt, gte, lt, lte, inDateRange, notInDateRange, set, notSet.",
           "Never invent a metric. Interpret generic sales/销售情况/销售额 as Orders.totalPrice only when that modeled metric fits the question.",

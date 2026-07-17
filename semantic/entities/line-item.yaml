@@ -139,15 +139,27 @@ entity:
       expr: l_tax
       type: decimal
   metrics:
+    - name: rowCount
+      title: 订单明细物理行数
+      description: Direct count of physical lineitem rows; use for base LineItem record-count queries that do not introduce one-to-many fan-out.
+      type: number
+      expr: COUNT(*)
+      synonyms:
+        - 明细行数
+        - 记录条数
+        - 物理行数
+        - 多少条
+        - row count
+        - line item rows
     - name: count
-      title: 订单明细数量
+      title: 订单明细实体数量
       description: Number of order line items.
       type: count
       expr: lineNumber
       synonyms:
-        - line item count
-        - 订单明细数量
-        - 明细行数量
+        - line item entity count
+        - 订单明细实体数量
+        - 去重明细数量
     - name: totalQuantity
       title: 发货商品数量
       description: Sum of quantities across line items.
