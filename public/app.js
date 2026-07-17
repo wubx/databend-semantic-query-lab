@@ -1053,6 +1053,7 @@ function formatCardinality(value) {
 async function plan(execute) {
   setBusy(true);
   clearError();
+  resetQueryOutput();
   try {
     const payload = {
       question: elements.question.value,
@@ -1073,12 +1074,34 @@ async function plan(execute) {
   }
 }
 
+function resetQueryOutput() {
+  currentPlan = undefined;
+  elements.route.textContent = "等待输入";
+  elements.interpretation.className = "empty";
+  elements.interpretation.textContent =
+    "输入自然语言问题后，这里会展示路由、认证查询和参数。";
+  elements.cubeQuery.textContent = "尚未生成";
+  elements.sql.textContent = "尚未生成";
+  elements.validation.textContent = "未验证";
+  elements.validation.style.color = "";
+  elements.explain.disabled = true;
+  elements.executeSql.disabled = true;
+  elements.explainResult.textContent = "";
+  elements.explainResult.classList.add("hidden");
+  elements.summary.textContent = "";
+  elements.summaryCard.classList.add("hidden");
+  elements.metrics.textContent = "等待执行";
+  elements.result.className = "empty";
+  elements.result.textContent = "执行查询后显示结果。";
+}
+
 function renderPlan(plan) {
   if (!plan.supported) {
     elements.route.textContent = "不支持";
     elements.interpretation.textContent = plan.message;
     return;
   }
+  elements.interpretation.className = "";
   elements.route.textContent =
     plan.route === "semantic" ? "Semantic" : "TPC-H SQL";
   elements.interpretation.innerHTML = [
@@ -1178,6 +1201,7 @@ async function executePlannedSql() {
 }
 
 function renderResult(response) {
+  elements.result.className = "";
   const rows = response.data || [];
   elements.metrics.textContent = `${response.source} · ${response.durationMs} ms · ${rows.length} rows · ${formatTimings(response.timings)}`;
   if (response.summary) {
