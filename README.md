@@ -152,6 +152,22 @@ semantic/policy.yaml                # AI 与查询治理声明
 - 可选使用 LLM 补充业务名称、描述、定义和同义词
 - LLM 只能增强业务元数据，不能修改表来源、SQL 表达式、类型、聚合方式、主键和访问权限
 
+## 客户演示模式与 Builder Mode
+
+默认使用客户演示模式：
+
+```env
+BUILDER_MODE=false
+```
+
+界面只突出“自然语言问题 → 语义计划 → Databend SQL → 真实结果”，并保留语义目录、查询日志和语义进化。YAML 编辑、模型生成、Certified SQL 管理、手工路由和实验性自由 SQL UI 默认隐藏，但查询路由仍可自动执行 Certified Query、Dynamic Cube、Semantic Workflow 和 Certified SQL。
+
+维护人员需要完整建模能力时启用：
+
+```env
+BUILDER_MODE=true
+```
+
 ### 已包含的认证查询
 
 - `S1`：订单总数

@@ -97,6 +97,7 @@ app.get("/api/health", async (_req, res) => {
     checks,
     aiEnabled: isEnabled(),
     aiModel: isEnabled() ? process.env.AI_MODEL : null,
+    builderMode: process.env.BUILDER_MODE === "true",
     queryLogPath: queryLogPath(),
     modelerLogPath: modelerLogPath(),
     semanticGateway: semanticGatewayMode(),

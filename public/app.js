@@ -1,6 +1,7 @@
 const elements = Object.fromEntries(
   [
     "health",
+    "experienceMode",
     "question",
     "examples",
     "plan",
@@ -105,6 +106,7 @@ const elements = Object.fromEntries(
   ].map((id) => [id, document.getElementById(id)]),
 );
 let currentPlan;
+let builderMode = false;
 let semanticModel;
 let selectedEntity = "all";
 let selectedKind = "all";
@@ -126,14 +128,16 @@ let evolutionFilter = "all";
 boot();
 
 async function boot() {
-  await Promise.all([
-    loadHealth(),
-    loadExamples(),
-    loadSemanticModel(),
-    loadSemanticSourceFiles(),
-    loadCertifiedSqlAssets(),
-    loadModelerDatabases(),
-  ]);
+  const health = await loadHealth();
+  applyExperienceMode(health?.builderMode === true);
+  const initialLoads = [loadExamples(), loadSemanticModel()];
+  if (builderMode)
+    initialLoads.push(
+      loadSemanticSourceFiles(),
+      loadCertifiedSqlAssets(),
+      loadModelerDatabases(),
+    );
+  await Promise.all(initialLoads);
   elements.plan.addEventListener("click", () => startQuery(false));
   elements.run.addEventListener("click", () => startQuery(true));
   elements.explain.addEventListener("click", explain);
@@ -160,45 +164,50 @@ async function boot() {
         showSemanticView(tab.dataset.semanticView),
       ),
     );
-  elements.copySource.addEventListener("click", copySemanticSource);
-  elements.editSource.addEventListener("click", () => setSourceEditing(true));
-  elements.cancelSourceEdit.addEventListener("click", () =>
-    setSourceEditing(false),
-  );
-  elements.validateSource.addEventListener("click", () =>
-    submitSemanticSource(false),
-  );
-  elements.saveSource.addEventListener("click", () =>
-    submitSemanticSource(true),
-  );
-  elements.deleteSource.addEventListener("click", deleteCurrentSemanticSource);
-  elements.downloadSource.addEventListener("click", downloadSemanticSource);
-  elements.sourceFileList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-source-file]");
-    if (button) loadSemanticSource(button.dataset.sourceFile);
-  });
-  elements.databaseSelect.addEventListener("change", loadModelerTables);
-  elements.tableSelector.addEventListener("change", updateModelerSelection);
-  elements.generateModel.addEventListener("click", generateModelDrafts);
-  elements.generatedDrafts.addEventListener("click", handleDraftAction);
-  elements.certifiedSqlList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-certified-sql]");
-    if (button) selectCertifiedSql(button.dataset.certifiedSql);
-  });
-  elements.newCertifiedSql.addEventListener("click", newCertifiedSql);
-  elements.validateCertifiedSql.addEventListener("click", () =>
-    submitCertifiedSql("validate"),
-  );
-  elements.explainCertifiedSql.addEventListener("click", () =>
-    submitCertifiedSql("explain"),
-  );
-  elements.publishCertifiedSql.addEventListener("click", () =>
-    submitCertifiedSql("publish"),
-  );
-  elements.deleteCertifiedSql.addEventListener(
-    "click",
-    deleteCurrentCertifiedSql,
-  );
+  if (builderMode) {
+    elements.copySource.addEventListener("click", copySemanticSource);
+    elements.editSource.addEventListener("click", () => setSourceEditing(true));
+    elements.cancelSourceEdit.addEventListener("click", () =>
+      setSourceEditing(false),
+    );
+    elements.validateSource.addEventListener("click", () =>
+      submitSemanticSource(false),
+    );
+    elements.saveSource.addEventListener("click", () =>
+      submitSemanticSource(true),
+    );
+    elements.deleteSource.addEventListener(
+      "click",
+      deleteCurrentSemanticSource,
+    );
+    elements.downloadSource.addEventListener("click", downloadSemanticSource);
+    elements.sourceFileList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-source-file]");
+      if (button) loadSemanticSource(button.dataset.sourceFile);
+    });
+    elements.databaseSelect.addEventListener("change", loadModelerTables);
+    elements.tableSelector.addEventListener("change", updateModelerSelection);
+    elements.generateModel.addEventListener("click", generateModelDrafts);
+    elements.generatedDrafts.addEventListener("click", handleDraftAction);
+    elements.certifiedSqlList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-certified-sql]");
+      if (button) selectCertifiedSql(button.dataset.certifiedSql);
+    });
+    elements.newCertifiedSql.addEventListener("click", newCertifiedSql);
+    elements.validateCertifiedSql.addEventListener("click", () =>
+      submitCertifiedSql("validate"),
+    );
+    elements.explainCertifiedSql.addEventListener("click", () =>
+      submitCertifiedSql("explain"),
+    );
+    elements.publishCertifiedSql.addEventListener("click", () =>
+      submitCertifiedSql("publish"),
+    );
+    elements.deleteCertifiedSql.addEventListener(
+      "click",
+      deleteCurrentCertifiedSql,
+    );
+  }
   elements.refreshEvolution.addEventListener("click", loadEvolutionIssues);
   elements.evolutionStats.addEventListener("click", (event) => {
     const button = event.target.closest("[data-evolution-filter]");
@@ -1152,6 +1161,25 @@ function formatLogTime(value) {
     : date.toLocaleString("zh-CN", { hour12: false });
 }
 
+function applyExperienceMode(enabled) {
+  builderMode = enabled;
+  document.body.classList.toggle("builder-mode", builderMode);
+  document.body.classList.toggle("demo-mode", !builderMode);
+  elements.experienceMode.textContent = builderMode
+    ? "Builder Mode"
+    : "客户演示模式";
+  document
+    .querySelectorAll("[data-builder-only]")
+    .forEach((element) =>
+      element.classList.toggle("experience-hidden", !builderMode),
+    );
+  document
+    .querySelectorAll("[data-demo-only]")
+    .forEach((element) =>
+      element.classList.toggle("experience-hidden", builderMode),
+    );
+}
+
 async function loadHealth() {
   try {
     const health = await api("/api/health");
@@ -1159,9 +1187,11 @@ async function loadHealth() {
       ? `${health.semanticGateway === "embedded" ? "Embedded Cube Compiler" : "Cube"} 与 Databend 已连接${health.aiEnabled ? ` · AI ${health.aiModel}` : ""}`
       : "依赖服务异常";
     elements.health.className = `health ${health.ok ? "ok" : "bad"}`;
+    return health;
   } catch (error) {
     elements.health.textContent = "Demo API 未连接";
     elements.health.className = "health bad";
+    return null;
   }
 }
 

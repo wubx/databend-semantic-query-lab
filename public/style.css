@@ -11,6 +11,36 @@
   background: #07111f;
   color: #e8f1ff;
 }
+.experience-hidden {
+  display: none !important;
+}
+.demo-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 14px;
+  padding: 9px 12px;
+  color: #9bb5c9;
+  font-size: 12px;
+  border: 1px solid rgba(82, 230, 200, 0.2);
+  border-radius: 10px;
+  background: rgba(9, 39, 44, 0.3);
+}
+.demo-flow span {
+  color: #c9dce9;
+  font-weight: 700;
+}
+.demo-flow i {
+  color: #52e6c8;
+  font-style: normal;
+}
+.demo-mode .composer textarea#question {
+  min-height: 104px;
+  font-size: 17px;
+}
+
 * {
   box-sizing: border-box;
 }

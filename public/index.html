@@ -18,6 +18,7 @@
           </p>
         </div>
         <div class="header-actions">
+          <div id="experienceMode" class="badge subtle">客户演示模式</div>
           <nav class="page-tabs" aria-label="页面导航">
             <button class="page-tab active" data-page="query">
               查询工作台
@@ -32,7 +33,7 @@
 
       <div id="queryPage" class="page-view active">
         <section class="composer card">
-          <div class="mode-row">
+          <div class="mode-row" data-builder-only>
             <label
               ><input type="radio" name="mode" value="auto" checked />
               自动</label
@@ -51,6 +52,10 @@
               ><input type="radio" name="planner" value="deterministic" />
               仅规则</label
             >
+          </div>
+          <div class="demo-flow" data-demo-only>
+            <span>自然语言问题</span><i>→</i><span>语义计划</span><i>→</i
+            ><span>Databend SQL</span><i>→</i><span>真实结果</span>
           </div>
           <textarea
             id="question"
@@ -90,7 +95,12 @@
             <div>
               <span id="validation" class="badge">未验证</span
               ><button id="explain" class="tiny" disabled>EXPLAIN</button
-              ><button id="executeSql" class="tiny primary" disabled>
+              ><button
+                id="executeSql"
+                class="tiny primary"
+                data-builder-only
+                disabled
+              >
                 执行 SQL
               </button>
             </div>
@@ -167,7 +177,7 @@
                 ></textarea>
               </label>
               <div class="evolution-human-actions">
-                <button id="evolutionOpenYaml" class="tiny">
+                <button id="evolutionOpenYaml" class="tiny" data-builder-only>
                   打开候选 YAML
                 </button>
                 <button id="evolutionReplay" class="tiny">回放代表问题</button>
@@ -208,7 +218,7 @@
             <option value="">全部 SQL 来源</option>
             <option value="cube-generated">Cube 生成</option>
             <option value="certified-sql">认证 SQL</option>
-            <option value="free-sql">自由 SQL</option>
+            <option value="free-sql" data-builder-only>实验性自由 SQL</option>
           </select>
           <select id="logStatusFilter">
             <option value="">全部状态</option>
@@ -249,13 +259,25 @@
           <button class="semantic-view-tab active" data-semantic-view="catalog">
             目录视图
           </button>
-          <button class="semantic-view-tab" data-semantic-view="certified-sql">
+          <button
+            class="semantic-view-tab"
+            data-semantic-view="certified-sql"
+            data-builder-only
+          >
             认证 SQL
           </button>
-          <button class="semantic-view-tab" data-semantic-view="source">
+          <button
+            class="semantic-view-tab"
+            data-semantic-view="source"
+            data-builder-only
+          >
             原始 YAML
           </button>
-          <button class="semantic-view-tab" data-semantic-view="generate">
+          <button
+            class="semantic-view-tab"
+            data-semantic-view="generate"
+            data-builder-only
+          >
             生成模型
           </button>
         </div>
@@ -514,6 +536,6 @@
         </div>
       </div>
     </main>
-    <script src="/app.js?v=20260717-workflow-sql"></script>
+    <script src="/app.js?v=20260717-demo-mode"></script>
   </body>
 </html>
