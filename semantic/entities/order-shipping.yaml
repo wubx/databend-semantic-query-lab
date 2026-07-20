@@ -42,6 +42,17 @@ entity:
     - name: orderAmount
       title: 单笔订单记录金额
       description: 订单粒度的 o_totalprice；在订单与运输方式组合粒度中，多运输方式订单会在多个运输方式组中出现。
+      governance:
+        status: validated
+        grain: order_ship_mode
+        unit: currency
+        currency: unknown
+        additivity: non_additive_across_groups
+        attribution: full_order_multi_attribution
+        prohibited_interpretations:
+          - uniquely_attributed_shipping_amount
+          - GMV
+          - revenue
       expr: order_amount
       type: decimal
       synonyms:
@@ -52,6 +63,12 @@ entity:
     - name: orderCount
       title: 使用运输方式的去重订单数
       description: 使用当前运输方式的去重订单数。一张多运输方式订单会同时计入多个运输方式，各组订单数不可相加为总订单数。
+      governance:
+        status: validated
+        grain: ship_mode
+        unit: order
+        additivity: non_additive_across_groups
+        attribution: multi_value
       type: count
       expr: orderShippingKey
       synonyms:
@@ -61,6 +78,18 @@ entity:
     - name: averageOrderAmount
       title: 按运输方式平均订单金额
       description: 使用当前运输方式的订单记录金额平均值。每张订单在同一运输方式下只计一次；多运输方式订单会进入多个运输方式组，因此该指标用于比较非互斥群组，不代表订单金额被唯一归属。
+      governance:
+        status: validated
+        grain: ship_mode
+        unit: currency
+        currency: unknown
+        additivity: non_additive
+        attribution: full_order_multi_attribution
+        allowed_uses:
+          - compare_non_exclusive_ship_mode_groups
+        prohibited_interpretations:
+          - causal_relationship
+          - uniquely_attributed_shipping_amount
       type: avg
       expr: orderAmount
       format: currency
@@ -89,7 +118,8 @@ entity:
         - 最高订单金额
         - maximum order amount
   governance:
-    status: draft
+    status: validated
+    grain: order_ship_mode
     owner: demo-team
     notes:
       - 一张订单在同一运输方式下只计一次。

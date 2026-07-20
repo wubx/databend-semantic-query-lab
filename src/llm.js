@@ -46,7 +46,7 @@ async function planWithLlm(question, mode = "auto") {
           "For a parent Top N followed by complete one-to-many child details, use strategy workflow with exactly two ungrouped stages. Stage 1 selects, orders, and limits parent keys. Stage 2 selects child details and declares a binding from the exported parent key to a public child key. Do not add the injected key filter yourself. Parent limit is at most 100; detail limit is at most 1000; select at most 16 detail dimensions.",
           "A workflow has this shape: {stages:[{id,query,exportMember},{id,dependsOn,query,binding:{fromStage,sourceMember,targetMember}}],outputStage}. Use CustomerNation.name for customer country and SupplierNation.name for supplier country. Customer country is not a receipt/delivery country.",
           "Use segments for semantic members whose kind is filter; for example LineItem.delayedReceipt must appear in segments, not filters.",
-          "Use exact member identifiers from the supplied semanticMemberCatalog.",
+          "Use exact member identifiers from the supplied semanticMemberCatalog. Treat member governance as hard semantic boundaries: respect grain, unit, additivity, role, attribution, allowedUses, prohibitedInterpretations, and warnings. Never rename or reinterpret a member as a prohibited business concept.",
           "For physical row-count questions such as 多少条/记录条数/row count on LineItem, prefer LineItem.rowCount; use LineItem.count only when the user asks for governed entity count or deduplicated line-item count.",
           "Allowed granularities: year, quarter, month, week, day.",
           "Allowed filter operators: equals, notEquals, contains, startsWith, gt, gte, lt, lte, inDateRange, notInDateRange, set, notSet.",

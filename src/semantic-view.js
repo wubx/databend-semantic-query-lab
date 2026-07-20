@@ -33,6 +33,23 @@ function buildSemanticView(manifest = loadManifest()) {
         enum: member.enum || [],
         public: member.access !== "private",
         format: member.format,
+        governance: {
+          status:
+            member.governance?.status ||
+            entity.governance?.status ||
+            "validated",
+          grain: member.governance?.grain || entity.governance?.grain,
+          unit: member.governance?.unit,
+          currency: member.governance?.currency,
+          additivity: member.governance?.additivity,
+          role: member.governance?.role || entity.governance?.role,
+          attribution: member.governance?.attribution,
+          allowedUses: member.governance?.allowed_uses || [],
+          prohibitedInterpretations:
+            member.governance?.prohibited_interpretations || [],
+          warnings:
+            member.governance?.warnings || entity.governance?.warnings || [],
+        },
         filters: member.filters || [],
         primaryKey: entity.keys?.primary === member.name,
         usedBy: usage.get(`${entity.name}.${member.name}`) || [],
@@ -44,6 +61,7 @@ function buildSemanticView(manifest = loadManifest()) {
       description: entity.description || "",
       source: entity.source,
       primaryKey: entity.keys?.primary,
+      governance: entity.governance || {},
       members,
       counts: countKinds(members),
     };

@@ -175,8 +175,8 @@ BUILDER_MODE=true
 - `S3`：每月订单金额趋势
 - `S4`：按年统计发货商品数量
 - `S5`：延迟收货明细数量
-- `S6`：运输方式与效率分析
-- `S7`：按区域统计订单金额
+- `S6`：运输方式物流指标分析
+- `S7`：按客户所属区域统计订单金额
 - `Q1`：TPC-H Pricing Summary Report
 - `Q6`：TPC-H Forecasting Revenue Change
 - `Q21`：TPC-H Suppliers Who Kept Orders Waiting

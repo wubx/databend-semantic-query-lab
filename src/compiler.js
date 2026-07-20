@@ -160,7 +160,24 @@ function compileMemberCatalog(manifest) {
             type: item.type,
             enum: item.enum,
             public: item.access !== "private",
-            owner: manifest.metadata.owner,
+            governance: compact({
+              status:
+                item.governance?.status ||
+                entity.governance?.status ||
+                "validated",
+              grain: item.governance?.grain || entity.governance?.grain,
+              unit: item.governance?.unit,
+              currency: item.governance?.currency,
+              additivity: item.governance?.additivity,
+              role: item.governance?.role || entity.governance?.role,
+              attribution: item.governance?.attribution,
+              allowedUses: item.governance?.allowed_uses,
+              prohibitedInterpretations:
+                item.governance?.prohibited_interpretations,
+              warnings:
+                item.governance?.warnings || entity.governance?.warnings,
+            }),
+            owner: entity.governance?.owner || manifest.metadata.owner,
             tags: manifest.metadata.tags,
           }),
         );

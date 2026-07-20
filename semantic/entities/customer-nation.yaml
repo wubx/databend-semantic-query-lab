@@ -32,6 +32,17 @@ entity:
         - customer country name
       description: 客户主数据关联的国家名称，不代表订单收货国家。
       business_definition: 通过 customer.c_nationkey 关联得到的 nation.n_name。TPC-H 没有订单收货国家字段，因此不得将该成员解释或展示为收货国家、接收国家或配送目的国。
+      governance:
+        status: governed
+        grain: customer_nation
+        role: customer_country
+        allowed_uses:
+          - customer_geography
+          - order_customer_geography
+        prohibited_interpretations:
+          - receipt_country
+          - delivery_country
+          - supplier_country
     - name: regionKey
       title: 客户所属区域编号
       expr: n_regionkey

@@ -30,7 +30,7 @@ test("time type: monthly semantic trend", () => {
 });
 
 test("join type: region analysis has a governed join chain", () => {
-  const plan = deterministicPlan("按区域统计订单金额。");
+  const plan = deterministicPlan("按客户所属区域统计订单金额。");
   assert.deepEqual(plan.cubeQuery.dimensions, ["Region.name"]);
   const model = new Map(
     artifacts.cubeModel.cubes.map((cube) => [cube.name, cube]),

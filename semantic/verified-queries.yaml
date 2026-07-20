@@ -93,13 +93,12 @@ verified_queries:
     result:
       summary_template: 延迟收货的明细数量为 {LineItem.count} 条。
   - id: S6
-    title: 运输方式效率分析
-    question: 分析运输方式及效率。
+    title: 运输方式物流指标分析
+    question: 分析各运输方式的物流指标。
     examples:
-      - 分析运输方式及效率
-      - 各运输方式的运输效率
-      - 比较不同运输方式的延迟率
-      - 哪种运输方式效率最高
+      - 分析各运输方式的物流指标
+      - 按运输方式比较明细数量、商品数量、延迟数量和平均运输天数
+      - 查看不同运输方式的运输和延迟指标
     route: semantic
     cube_query:
       measures:
@@ -115,12 +114,12 @@ verified_queries:
       limit: 100
     verified_by: demo-team
   - id: S7
-    title: 按区域统计订单金额
-    question: 按区域统计订单金额。
+    title: 按客户所属区域统计订单金额
+    question: 按客户所属区域统计订单金额。
     examples:
-      - 按区域统计订单金额
-      - 各区域订单金额是多少
-      - 区域销售额排名
+      - 按客户所属区域统计订单金额
+      - 各客户区域订单金额是多少
+      - 客户所属区域订单记录金额排名
     route: semantic
     cube_query:
       measures:

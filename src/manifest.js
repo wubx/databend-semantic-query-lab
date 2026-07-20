@@ -72,6 +72,13 @@ function validateManifest(manifest) {
           `metric ${entity.name}.${metric.name} requires type and expr`,
         );
     }
+    validateGovernance(entity.governance, `entity ${entity.name}`, errors);
+    for (const member of entityMembers)
+      validateGovernance(
+        member.governance,
+        `member ${entity.name}.${member.name}`,
+        errors,
+      );
   }
 
   for (const relationship of manifest.relationships || []) {
@@ -157,6 +164,35 @@ function validateMember(qualifiedName, expectedKind, members, errors, queryId) {
     errors.push(
       `verified query ${queryId} uses ${qualifiedName} as ${expectedKind}, but it is ${member.kind}`,
     );
+  }
+}
+
+function validateGovernance(governance, label, errors) {
+  if (!governance) return;
+  if (
+    governance.status &&
+    !["draft", "validated", "governed", "certified", "deprecated"].includes(
+      governance.status,
+    )
+  )
+    errors.push(`${label} has unsupported governance.status`);
+  if (
+    governance.additivity &&
+    ![
+      "additive",
+      "semi_additive",
+      "non_additive",
+      "non_additive_across_groups",
+    ].includes(governance.additivity)
+  )
+    errors.push(`${label} has unsupported governance.additivity`);
+  for (const field of [
+    "allowed_uses",
+    "prohibited_interpretations",
+    "warnings",
+  ]) {
+    if (governance[field] && !Array.isArray(governance[field]))
+      errors.push(`${label} governance.${field} must be an array`);
   }
 }
 

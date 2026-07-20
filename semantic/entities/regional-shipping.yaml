@@ -142,6 +142,14 @@ entity:
     - name: regionalLineShare
       title: 区域内运输方式明细占比
       description: 该运输方式的订单明细数量占区域全部订单明细数量的比例；适合比较区域内运输方式分布，不应直接解释为客户因果偏好。
+      governance:
+        status: validated
+        grain: customer_region_ship_mode
+        unit: ratio
+        additivity: non_additive
+        attribution: line_share
+        prohibited_interpretations:
+          - causal_preference
       type: sum
       expr: regionalLineShareValue
       format: percent
@@ -153,6 +161,15 @@ entity:
     - name: regionalOrderUsageRate
       title: 区域内运输方式订单使用率
       description: 包含该运输方式的去重订单数占区域全部去重订单数的比例；多运输方式订单会计入多个方式，各方式使用率之和可能超过100%。
+      governance:
+        status: validated
+        grain: customer_region_ship_mode
+        unit: ratio
+        additivity: non_additive
+        attribution: multi_value_order_usage
+        prohibited_interpretations:
+          - mutually_exclusive_share
+          - causal_preference
       type: sum
       expr: regionalOrderUsageRateValue
       format: percent
@@ -163,6 +180,15 @@ entity:
     - name: regionalCustomerUsageRate
       title: 区域内运输方式客户使用率
       description: 使用过该运输方式的去重客户数占区域全部有发货明细客户数的比例；客户可使用多种方式，各方式使用率之和可能超过100%。
+      governance:
+        status: validated
+        grain: customer_region_ship_mode
+        unit: ratio
+        additivity: non_additive
+        attribution: multi_value_customer_usage
+        prohibited_interpretations:
+          - mutually_exclusive_share
+          - causal_preference
       type: sum
       expr: regionalCustomerUsageRateValue
       format: percent
@@ -172,7 +198,8 @@ entity:
         - 客户偏好运输方式
         - regional customer usage rate
   governance:
-    status: draft
+    status: validated
+    grain: customer_region_ship_mode
     owner: demo-team
     notes:
       - “偏好”默认应明确使用明细占比、订单使用率或客户使用率之一。

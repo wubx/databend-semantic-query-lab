@@ -32,6 +32,17 @@ entity:
         - supplier country name
       description: 供应商主数据关联的国家名称。
       business_definition: 通过 supplier.s_nationkey 关联得到的 nation.n_name，用于明确表示供应商所属国家，不表示客户国家或订单收货国家。
+      governance:
+        status: governed
+        grain: supplier_nation
+        role: supplier_country
+        allowed_uses:
+          - supplier_geography
+          - line_item_supplier_geography
+        prohibited_interpretations:
+          - customer_country
+          - receipt_country
+          - delivery_country
     - name: regionKey
       title: 供应商所属区域编号
       expr: n_regionkey

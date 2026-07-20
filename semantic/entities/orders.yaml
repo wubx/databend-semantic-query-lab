@@ -1,7 +1,7 @@
 entity:
   name: Orders
   title: 订单
-  description: 基于 Databend 中 tpch_100.orders 表的订单主题草稿语义模型，用于按订单状态、订单优先级和下单日期分析订单数量及订单记录金额。数据来自 TPC-H SF100 决策支持测试集，不代表真实生产业务。
+  description: 基于 Databend 中 tpch_100.orders 表的订单主题语义模型，用于按订单状态、订单优先级和下单日期分析订单数量及订单记录金额。数据来自 TPC-H SF100 决策支持测试集，不代表真实生产业务。
   source:
     schema: tpch_100
     table: orders
@@ -85,6 +85,19 @@ entity:
       expr: o_totalprice
       type: decimal
       business_definition: 订单粒度的金额事实，对应 orders 表的 o_totalprice。该字段表示数据中记录的单笔订单总价格；币种及实际业务口径尚未确认。
+      governance:
+        status: validated
+        grain: order
+        unit: currency
+        currency: unknown
+        additivity: non_additive
+        allowed_uses:
+          - order_detail
+          - order_ranking
+          - governed_measure_input
+        prohibited_interpretations:
+          - GMV
+          - revenue
       synonyms:
         - 单笔订单金额
         - 订单记录金额
@@ -106,6 +119,11 @@ entity:
         - number of orders
         - total orders
       business_definition: 按订单主键 orderKey 统计的订单数量，用于衡量当前分析范围内包含多少张订单。
+      governance:
+        status: certified
+        grain: query_result
+        unit: order
+        additivity: additive
     - name: totalPrice
       title: 订单记录金额合计
       description: 对各订单记录的总价格进行求和得到的候选指标。
@@ -119,6 +137,26 @@ entity:
         - sum of order totals
         - total recorded order amount
       business_definition: 对订单粒度事实 orderTotal 求和，反映当前分析范围内 o_totalprice 的合计值。该指标不应直接解释为真实业务 GMV；币种和实际业务口径需人工确认。
+      governance:
+        status: validated
+        grain: query_result
+        unit: currency
+        currency: unknown
+        additivity: additive
+        allowed_uses:
+          - order_amount_aggregation
+          - dimension_comparison
+          - time_trend
+        prohibited_interpretations:
+          - GMV
+          - revenue
+  governance:
+    status: validated
+    grain: order
+    owner: demo-team
+    warnings:
+      - 金额字段的币种和真实业务口径尚未确认。
+      - Orders.totalPrice 不应直接命名为 GMV、销售收入或营收。
   filters:
     - name: fulfilled
       title: 已完成订单

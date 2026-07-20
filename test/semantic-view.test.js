@@ -18,7 +18,10 @@ test("builds a user-facing semantic model view", () => {
   assert.equal(totalPrice.kind, "measure");
   assert.equal(totalPrice.expression, "orderTotal");
   assert.ok(totalPrice.synonyms.includes("订单金额合计"));
-  assert.ok(totalPrice.usedBy.some((query) => query.id === "S2"));
+  assert.equal(totalPrice.governance.unit, "currency");
+  assert.equal(totalPrice.governance.currency, "unknown");
+  assert.equal(totalPrice.governance.additivity, "additive");
+  assert.ok(totalPrice.governance.prohibitedInterpretations.includes("GMV"));
   const regionalShipping = view.entities.find(
     (entity) => entity.name === "RegionalShipping",
   );
